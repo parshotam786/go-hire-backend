@@ -3,6 +3,7 @@ const {
   ProductList,
   getProductsByVendorId,
   removeProduct,
+  updateProduct,
 } = require("../controllers/productController");
 const multer = require("multer");
 const router = require("express").Router();
@@ -32,6 +33,11 @@ const upload = multer({
 });
 
 router.post("/add-product", upload.array("image", 5), addProduct);
+router.put(
+  "/update-product/:productId",
+  upload.array("image", 5),
+  updateProduct
+);
 router.post("/delete-product", removeProduct);
 router.delete("/delete-product/:productId", removeProduct);
 router.get("/product-list", ProductList);

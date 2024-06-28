@@ -45,6 +45,71 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+exports.updateProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const {
+      productName,
+      companyProductName,
+      productDescription,
+      category,
+      status,
+      rentPrice,
+      rentDuration,
+      salePrice,
+      availability,
+      minStock,
+      maxStock,
+      subCategory,
+      vendorId,
+    } = req.body;
+
+    const images = req.files ? req.files.map((file) => file.path) : undefined;
+
+    const updateFields = {
+      productName,
+      companyProductName,
+      productDescription,
+      category,
+      status,
+      rentPrice,
+      rentDuration,
+      salePrice,
+      availability,
+      minStock,
+      maxStock,
+      subCategory,
+      vendorId,
+      ...(images && { images }), // Only add images if they are provided
+    };
+
+    // Remove undefined fields from the updateFields object
+    Object.keys(updateFields).forEach(
+      (key) => updateFields[key] === undefined && delete updateFields[key]
+    );
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error updating product", details: error.message });
+  }
+};
+
 exports.ProductList = async (req, res) => {
   const products = await Product.find().populate();
   res.status(200).json({

@@ -4,6 +4,7 @@ const {
   getProductsByVendorId,
   removeProduct,
   updateProduct,
+  getProudctById,
 } = require("../controllers/productController");
 const multer = require("multer");
 const router = require("express").Router();
@@ -38,8 +39,8 @@ router.put(
   upload.array("image", 5),
   updateProduct
 );
-router.post("/delete-product", removeProduct);
 router.delete("/delete-product/:productId", removeProduct);
+router.get("/product-detail/:id", getProudctById);
 router.get("/product-list", ProductList);
 router.post("/product-lists", getProductsByVendorId);
 

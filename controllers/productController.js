@@ -180,3 +180,30 @@ exports.removeProduct = async (req, res) => {
       .json({ error: "Error removing product", details: error.message });
   }
 };
+
+// exports.getProudctById = async (req, res) => {
+//   try {
+//     const id = req.params.id;
+//     const products = await Product.findOne(id);
+//     res.status(200).json(products);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+exports.getProudctById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id).select("-__v");
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json({ product });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error retrieving product", details: error.message });
+  }
+};

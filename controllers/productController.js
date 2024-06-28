@@ -14,6 +14,7 @@ exports.addProduct = async (req, res) => {
       availability,
       minStock,
       maxStock,
+      subCategory,
       vendorId,
     } = req.body;
 
@@ -27,8 +28,8 @@ exports.addProduct = async (req, res) => {
       status,
       rentPrice,
       rentDuration,
+      subCategory,
       salePrice,
-      availability,
       minStock,
       maxStock,
       vendorId,
@@ -66,8 +67,8 @@ exports.getProductsByVendorId = async (req, res) => {
       companyProductName: product.companyProductName,
       productDescription: product.productDescription,
       category: product.category,
+      sub_category: product.subCategory,
       status: product.status,
-      availability: product.availability,
       rentPrice: product.rentPrice,
       rentDuration: product.rentDuration,
       salePrice: product.salePrice,
@@ -77,7 +78,6 @@ exports.getProductsByVendorId = async (req, res) => {
       thumbnail: product.images[0],
       isActive: product.isActive,
       title: product.productName,
-      __v: product.__v,
     }));
 
     res.status(200).json({

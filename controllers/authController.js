@@ -210,6 +210,20 @@ const VenderDirectory = async (req, res) => {
   }
 };
 
+const UserProfile = async (req, res) => {
+  try {
+    const vender = await Vender.findById(req.params.id).select(
+      "-password -__v"
+    );
+    if (vender) {
+      res.status(200).json(vender);
+    } else {
+      res.status(404).json({ message: "Vendor not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -218,4 +232,5 @@ module.exports = {
   updateVenderStatus,
   AdminDirectory,
   VenderDirectory,
+  UserProfile,
 };

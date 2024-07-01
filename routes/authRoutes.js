@@ -5,6 +5,7 @@ const {
   AdminRegister,
   AdminDirectory,
   VenderRegister,
+  UserProfile,
   VenderLogin,
   updateVenderStatus,
   VenderDirectory,
@@ -48,6 +49,7 @@ router.post("/vender-login", VenderLogin);
 router.post("/vender/status", updateVenderStatus);
 router.get("/admin-directory", AdminDirectory);
 router.get("/vender/directory", VenderDirectory);
+router.get("/vender/profile/:id", UserProfile);
 
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);

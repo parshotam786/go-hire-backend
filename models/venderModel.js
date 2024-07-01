@@ -89,13 +89,17 @@ const VenderSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  profile_Picture: {
+    type: String,
+    default: null,
+  },
   role: {
     type: String,
     default: "Seller",
   },
   status: {
     type: String,
-    default: "pending",
+    default: "inactive",
   },
 });
 

@@ -5,6 +5,7 @@ const {
   removeProduct,
   updateProduct,
   getProudctById,
+  deleteProductImage,
 } = require("../controllers/productController");
 const multer = require("multer");
 const router = require("express").Router();
@@ -15,7 +16,8 @@ const storage = multer.diskStorage({
     cb(null, "images");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    console.log({ file });
+    cb(null, Date.now() + file.originalname);
   },
 });
 
@@ -41,6 +43,7 @@ router.put(
 );
 router.delete("/delete-product/:productId", removeProduct);
 router.get("/product-detail/:id", getProudctById);
+router.delete("/product/:productId/image", deleteProductImage);
 router.get("/product-list", ProductList);
 router.post("/product-lists", getProductsByVendorId);
 

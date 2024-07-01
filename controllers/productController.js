@@ -65,7 +65,14 @@ exports.updateProduct = async (req, res) => {
       vendorId,
     } = req.body;
 
-    const images = req.files ? req.files.map((file) => file.path) : undefined;
+    const existImage = await Product.findById(productId).select("images");
+    console.log({ existImage });
+
+    // Check if req.files exists and properly handle the images
+    let images =
+      req.files && req.files.length > 0
+        ? req.files.map((file) => file.path)
+        : existImage.images;
 
     const updateFields = {
       productName,
@@ -81,7 +88,7 @@ exports.updateProduct = async (req, res) => {
       maxStock,
       subCategory,
       vendorId,
-      ...(images && { images }), // Only add images if they are provided
+      images, // Only add images if they are provided
     };
 
     // Remove undefined fields from the updateFields object
@@ -107,6 +114,26 @@ exports.updateProduct = async (req, res) => {
     res
       .status(500)
       .json({ error: "Error updating product", details: error.message });
+  }
+};
+
+// Delete Product image
+exports.deleteProductImage = async (req, res) => {
+  const { productId } = req.params;
+  const { imageUrl } = req.body;
+
+  try {
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).send({ message: "Product not found" });
+    }
+
+    product.images = product.images.filter((img) => img !== imageUrl);
+    await product.save();
+
+    res.status(200).send({ message: "Image deleted successfully" });
+  } catch (error) {
+    res.status(500).send({ message: "Error deleting image", error });
   }
 };
 

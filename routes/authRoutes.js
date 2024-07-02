@@ -8,7 +8,12 @@ const {
   VenderLogin,
   updateVenderStatus,
   VenderDirectory,
+  updateVendorPassword,
+  forgotVendorPassword,
+  verifyOtp,
+  resetPassword,
 } = require("../controllers/authController");
+const { protect } = require("../middleware/authMiddleware");
 // const {
 //   addProduct,
 //   ProductList,
@@ -48,6 +53,10 @@ router.post("/vender-login", VenderLogin);
 router.post("/vender/status", updateVenderStatus);
 router.get("/admin-directory", AdminDirectory);
 router.get("/vender/directory", VenderDirectory);
+router.post("/vender-update-password/:id", protect, updateVendorPassword);
+router.post("/vender-forgot-password", forgotVendorPassword);
+router.post("/vender-verify", verifyOtp);
+router.post("/vender-reset-password", protect, resetPassword);
 
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);

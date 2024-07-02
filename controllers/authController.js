@@ -1,7 +1,9 @@
 const Admin = require("../models/adminModel");
 const Vender = require("../models/venderModel");
+const OtpVerification = require("../models/otpVerificationModel")
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const nodemailer = require('nodemailer')
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -210,6 +212,187 @@ const VenderDirectory = async (req, res) => {
   }
 };
 
+const updateProfileAdmin = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name } = req.body
+
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const admin = await Admin.findById(id)
+    if (!admin) {
+        res.status(404).json({ error: 'Admin not found!' })
+    }
+
+    admin.name =  name;
+    await admin.save();
+
+    res.status(200).json({ message: "Profile updated successfully!", admin })
+  } catch (error) {
+    res.status(500).send({ error: error.message })
+  }
+}
+
+const updateVendorPassword = async (req, res) => {
+  const { id } = req.params
+  const { current_password, new_password } = req.body
+
+  try {    
+    const vender = await Vender.findById(id) // or req.user.id
+
+    if (!vender) {
+      return res.status(404).json({ error: "Vendor not found" });
+    }
+
+    const isMatch = await bcrypt.compare(current_password, vender.password)
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid current password" })
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    vender.password = hashedPassword
+    await vender.save()
+    return res.status(200).json({ message: "Password updated successfully!", vender })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
+const forgotVendorPassword = async (req, res) => {
+  const { email } = req.body
+  try {
+    if(!email) {
+      return res.status(401).json({ message: "Email is required" })
+    }
+
+    const vender = await Vender.findOne({ email })
+
+    if (!vender) {
+      return res.status(404).json({ error: "Email not found" });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    const hashedOtp = await bcrypt.hash(otp.toString(), 10)
+
+    // check if otp exist so update this otp (if otp already exist)
+    const checkOtp = await OtpVerification.findOne({ email })
+
+    if (checkOtp) {
+      console.log("already exist otp")
+      await OtpVerification.findOneAndUpdate( { email }, { otp: hashedOtp }, { upsert: true } )
+      await sendOtpVerification(email, otp)
+    }
+    else {
+      // create new otp
+      console.log("new otp")
+      await OtpVerification.create({
+        email,
+        otp: hashedOtp
+      })
+      await sendOtpVerification(email, otp)    
+    }
+    return res.status(200).json({ message: "OTP sent successfully!" })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
+const sendOtpVerification = async (email, otp) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      // service: 'gmail',
+      // auth: {
+      //   user: '',
+      //   pass: ''
+      // },
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+          user: 'blake.koss@ethereal.email',
+          pass: 'yTThTSu3fS5hTpNcaz'
+      }
+    });
+
+    const mailOptions = {
+      from: 'testing@mailinator.com',
+      to: email,
+      subject: "Verification",
+      html: `<p>Your OTP code is ${otp}<p/>`
+    }
+    await transporter.sendMail(mailOptions);
+    console.log("OTP code sent successfully to", email, otp)
+  } catch (error) {
+    console.log("Error sending OTP email", error)
+  }
+}
+
+const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body
+  try {
+    if (!email || !otp) {
+      return res.status(400).json({ error: "All fields required!" })
+    }
+
+    const checkOtp = await OtpVerification.findOne({ email })
+
+    if (!checkOtp) {
+      return res.status(400).json({ error: "Again generate OTP!" })
+    }
+
+    // compare time
+    if (checkOtp.expiresAt < new Date()) {
+      await OtpVerification.deleteOne({ email })
+      return res.status(400).json({ error: "OTP has expired" })
+    }
+
+    const isMatch = await bcrypt.compare(otp, checkOtp.otp)
+
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid OTP" })
+    }
+
+    const vender = await Vender.findOne({ email })
+    const token = jwt.sign(
+      { id: vender._id, role: vender.role },
+      "your_jwt_secret",
+      { expiresIn: "1h" }
+    );
+
+    await OtpVerification.deleteOne({ email })
+
+    return res.status(200).json({ token: token, message: "OTP verified successfully!" })
+  } catch (error) {
+    return res.status(500).send({ error: error.message });
+  }
+}
+
+const resetPassword = async (req, res) => {
+  const { new_password } = req.body
+  try {
+    if (!new_password) {
+      return res.status(400).json({ error: "New passowrd is required" })
+    }
+    
+    const vendor = await Vender.findById(req.user.id)
+
+    if (!vendor) {
+      return res.status(400).json({ error: "Vendor not found!" })
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10)
+    vendor.password = hashedPassword
+    await vendor.save()
+
+    return res.status(200).json({ message: "Password reseet successfully!", vendor })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -218,4 +401,8 @@ module.exports = {
   updateVenderStatus,
   AdminDirectory,
   VenderDirectory,
+  updateVendorPassword,
+  forgotVendorPassword,
+  verifyOtp,
+  resetPassword
 };

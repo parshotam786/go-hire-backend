@@ -2,6 +2,7 @@ const Admin = require("../models/adminModel");
 const Vender = require("../models/venderModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const upload = require("../utiles/multerConfig");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -128,7 +129,7 @@ const VenderLogin = async (req, res) => {
       return res.status(400).send({ message: "Invalid email or password" });
     }
     const token = jwt.sign(
-      { id: vender._id, role: vender.role },
+      { _id: vender._id, role: vender.role },
       "your_jwt_secret",
       { expiresIn: "1h" }
     );
@@ -136,7 +137,7 @@ const VenderLogin = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        id: vender.id,
+        _id: vender.id,
         name: vender.name,
         email: vender.email,
         companyName: vender.companyName,
@@ -157,7 +158,10 @@ const VenderLogin = async (req, res) => {
         swiftCode: vender.swiftCode,
         iban: vender.iban,
         declaration: vender.declaration,
+        profile_Picture: vender.profile_Picture,
         signature: vender.signature,
+        role: vender.role,
+        status: vender.status,
       },
       role: vender.role,
       status: vender.status,
@@ -185,9 +189,11 @@ const updateVenderStatus = async (req, res) => {
     vender.status = status;
     await vender.save();
 
-    res
-      .status(200)
-      .send({ message: "Vendor status updated successfully", vender });
+    res.status(200).send({
+      success: false,
+      message: "Vendor status updated successfully",
+      vender,
+    });
   } catch (err) {
     res.status(500).send({ error: err.message });
   }
@@ -212,16 +218,115 @@ const VenderDirectory = async (req, res) => {
 
 const UserProfile = async (req, res) => {
   try {
-    const vender = await Vender.findById(req.params.id).select(
-      "-password -__v"
-    );
+    const vender = await Vender.findById(req.params.id).select("-password");
     if (vender) {
-      res.status(200).json(vender);
+      res.status(200).json({
+        success: true,
+        data: {
+          user: vender,
+        },
+      });
     } else {
       res.status(404).json({ message: "Vendor not found" });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+const updateProfilePicture = (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err });
+    }
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
+    }
+
+    try {
+      const vender = await Vender.findByIdAndUpdate(
+        req.params.id,
+        { profile_Picture: req.file.path },
+        { new: true }
+      ).select("-__v -password");
+
+      if (!vender) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Vendor not found" });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Profile has been update successfully!",
+        data: {
+          user: vender,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
+  });
+};
+
+const getProfilePicture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Vender.findById(id).select("profile_Picture");
+
+    if (!user) {
+      return res.status(404).json({ error: "Profile picture not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ error: "", details: error.message });
+  }
+};
+
+const updateUserdata = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = {
+      primaryContact: req.body.primaryContact,
+      bankAddress: req.body.bankAddress,
+      street: req.body.street,
+      companyName: req.body.companyName,
+      legalName: req.body.legalName,
+      businessType: req.body.businessType,
+      taxId: req.body.taxId,
+      swiftCode: req.body.swiftCode,
+      iban: req.body.iban,
+      zip: req.body.zip,
+      city: req.body.city,
+      state: req.body.state,
+      email: req.body.email,
+      primaryPhone: req.body.primaryPhone,
+      country: req.body.country,
+      accountName: req.body.accountName,
+      accountNumber: req.body.accountNumber,
+    };
+
+    const updatedVender = await Vender.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-__v -password");
+
+    if (!updatedVender) {
+      return res.status(404).send("Vender not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Update successful!",
+      data: {
+        user: updatedVender,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Invalid data!" });
   }
 };
 module.exports = {
@@ -233,4 +338,7 @@ module.exports = {
   AdminDirectory,
   VenderDirectory,
   UserProfile,
+  updateProfilePicture,
+  getProfilePicture,
+  updateUserdata,
 };

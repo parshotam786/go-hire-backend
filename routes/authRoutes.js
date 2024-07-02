@@ -9,14 +9,16 @@ const {
   VenderLogin,
   updateVenderStatus,
   VenderDirectory,
+  updateProfilePicture,
+  getProfilePicture,
+  updateUserdata,
 } = require("../controllers/authController");
-// const {
-//   addProduct,
-//   ProductList,
-//   getProductsByVendorId,
-//   removeProduct,
-// } = require("../controllers/productController");
-// const router = require("express").Router();
+const {
+  addProduct,
+  ProductList,
+  getProductsByVendorId,
+  removeProduct,
+} = require("../controllers/productController");
 // const path = require("path");
 
 // const storage = multer.diskStorage({
@@ -50,7 +52,9 @@ router.post("/vender/status", updateVenderStatus);
 router.get("/admin-directory", AdminDirectory);
 router.get("/vender/directory", VenderDirectory);
 router.get("/vender/profile/:id", UserProfile);
-
+router.put("/vender/profile-picture/:id", updateProfilePicture);
+router.get("/vender/profile-picture/:id", getProfilePicture);
+router.put("/vender/:id", updateUserdata);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

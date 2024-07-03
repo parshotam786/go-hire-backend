@@ -329,6 +329,31 @@ const updateUserdata = async (req, res) => {
     res.status(500).json({ message: "Invalid data!" });
   }
 };
+
+const updateVendorStatus = async (req, res) => {
+  try {
+    const vendorId = req.params.id;
+    const { status } = req.body;
+
+    const updatedVendor = await Vender.findByIdAndUpdate(
+      vendorId,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedVendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Your request has been sent!",
+      status: updatedVendor.status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -341,4 +366,5 @@ module.exports = {
   updateProfilePicture,
   getProfilePicture,
   updateUserdata,
+  updateVendorStatus,
 };

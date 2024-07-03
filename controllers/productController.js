@@ -152,7 +152,9 @@ exports.getProductsByVendorId = async (req, res) => {
       return res.status(400).json({ error: "Vendor ID is required" });
     }
 
-    const products = await Product.find({ vendorId });
+    const products = await Product.find({ vendorId }).sort({
+      createdAt: -1,
+    });
 
     const transformedProducts = products.map((product) => ({
       id: product._id,

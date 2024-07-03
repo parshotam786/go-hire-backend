@@ -16,6 +16,7 @@ app.get("/", (req, res) => {
   res.send({ message: "sccess" });
 });
 
+app.use("/api", require("./routes/adminRoutes"));
 app.use("/api", require("./routes/authRoutes"));
 app.use("/api", require("./routes/productRoutes"));
 app.use("/api", require("./routes/categoriesRoutes"));

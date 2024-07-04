@@ -354,6 +354,31 @@ const updateVendorStatus = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+const removeVenderAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Vendor ID is required" });
+    }
+
+    const Vendor = await Vender.findByIdAndDelete(id);
+
+    if (!Vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Vendor Account Deleted successfully",
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error removing Vendor", details: error.message });
+  }
+};
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -367,4 +392,5 @@ module.exports = {
   getProfilePicture,
   updateUserdata,
   updateVendorStatus,
+  removeVenderAccount,
 };

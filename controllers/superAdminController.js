@@ -16,7 +16,7 @@ exports.AllVendorList = async (req, res) => {
     }, {});
 
     const list = vendors.map((vendor) => ({
-      _id: vendor._id,
+      id: vendor._id,
       thumbnail: vendor.profile_Picture,
       title: vendor.companyName,
       status: vendor.status,

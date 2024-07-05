@@ -16,6 +16,10 @@ const {
   removeVenderAccount,
 } = require("../controllers/authController");
 const {
+  invoiceAddData,
+  GetInvoiceListById,
+} = require("../controllers/invoiceController");
+const {
   addProduct,
   ProductList,
   getProductsByVendorId,
@@ -60,6 +64,8 @@ router.delete("/vender/:id", removeVenderAccount);
 
 router.put("/vender/:id", updateUserdata);
 router.put("/vender/update-status/:id", updateVendorStatus);
+router.post("/vender/invoice", invoiceAddData);
+router.get("/vender/invoice-list/:id", GetInvoiceListById);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

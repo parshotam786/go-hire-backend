@@ -160,6 +160,7 @@ exports.getProductsByVendorId = async (req, res) => {
       id: product._id,
       companyProductName: product.companyProductName,
       productDescription: product.productDescription,
+      productName: product.productName,
       category: product.category,
       sub_category: product.subCategory,
       status: product.status,

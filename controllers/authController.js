@@ -1,6 +1,8 @@
 const Admin = require("../models/adminModel");
 const Vender = require("../models/venderModel");
 const OtpVerification = require("../models/otpVerificationModel")
+const User = require("../models/userModel")
+const UserOtpVerification = require("../models/userOtpVerificationModal")
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const nodemailer = require('nodemailer')
@@ -393,6 +395,102 @@ const resetPassword = async (req, res) => {
   }
 }
 
+const UserRegister = async (req, res) => {
+  const { name, email, password } = req.body
+  try {
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return res.status(400).json({ message: "User already registered" })
+    }
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(password, salt)
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword
+    })
+    await newUser.save();
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    const hashedOtp = await bcrypt.hash(otp.toString(), 10)
+
+    const checkOtp = await UserOtpVerification.findOne({ email })
+    if (checkOtp) {
+      await UserOtpVerification.findOneAndUpdate( { email }, { otp: hashedOtp }, { upsert: true } )
+    }
+    else {
+      await UserOtpVerification.create({
+        email,
+        otp: hashedOtp
+      })
+    }
+    await sendOtpVerification(email, otp)
+
+    return res.status(201).json({ message: "User created successfully!" })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
+const UserLogin = async (req, res) => {
+  const { email, password } = req.body
+  try {
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" })
+    }
+    const isMatch = await bcrypt.compare(password, user.password)
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid email or password" })
+    }
+    const token = jwt.sign(
+      { id: user._id },
+      "your_jwt_secret",
+      { expiresIn: "1h" }
+    );
+    res.status(200).send({
+      message: "Login successfull",
+      user: user,
+      token: token
+    })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
+const VerifyUserOtp = async (req, res) => {
+  const { otp, email } = req.body
+  try {
+    if (!otp || !email) {
+      return res.status(400).send({ error: "All fields are required!" })
+    }
+    const checkOtp = await UserOtpVerification.findOne({ email })
+    if (!checkOtp) {
+      return res.status(400).send({ error: "Email not found!" })
+    }
+    if (checkOtp.expiresAt < Date.now()) {
+      await UserOtpVerification.deleteOne({ email })
+      return res.status(400).json({ error: "OTP has expired!" })
+    }
+    const isMatch = await bcrypt.compare(otp, checkOtp.otp)
+    if (!isMatch) {
+      return res.status(400).json({ error: "OTP did not match" })
+    }
+    const user = await User.findOne({ email })
+    const token = jwt.sign(
+      { id: user._id },
+      "your_jwt_secret",
+      { expiresIn: "1h" }
+    );
+    await UserOtpVerification.deleteOne({ email })
+    res.status(200).json({
+      token: token,
+      message: "OTP verified successfully!"
+    })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -404,5 +502,8 @@ module.exports = {
   updateVendorPassword,
   forgotVendorPassword,
   verifyOtp,
-  resetPassword
+  resetPassword,
+  UserRegister,
+  UserLogin,
+  VerifyUserOtp
 };

@@ -12,6 +12,9 @@ const {
   forgotVendorPassword,
   verifyOtp,
   resetPassword,
+  UserRegister,
+  UserLogin,
+  VerifyUserOtp,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 // const {
@@ -57,6 +60,9 @@ router.post("/vender-update-password/:id", protect, updateVendorPassword);
 router.post("/vender-forgot-password", forgotVendorPassword);
 router.post("/vender-verify", verifyOtp);
 router.post("/vender-reset-password", protect, resetPassword);
+router.post("/user-register", UserRegister);
+router.post("/user-login", UserLogin);
+router.post("/user-verify", VerifyUserOtp);
 
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);

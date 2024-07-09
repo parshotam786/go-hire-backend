@@ -491,6 +491,76 @@ const VerifyUserOtp = async (req, res) => {
   }
 }
 
+const UpdateUserPassword = async (req, res) => {
+  const { id } = req.params
+  const { old_password, new_password } = req.body
+  try {
+    const user = await User.findById(id)
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" })
+    }
+    const isMatch = await bcrypt.compare(old_password, user.password)
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid current Password" })
+    }
+    const hashedPassword = await bcrypt.hash(new_password, 10)
+    user.password = hashedPassword,
+    await user.save()
+    res.status(200).json({ message: "Password updated successfully!" })
+  } catch (error) {
+    return res.status(500).send({ error: error.message })
+  }
+}
+
+const ForgotUserPassword = async (req, res) => {
+  const { email } = req.body
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" })
+    }
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" })
+    }
+    const otp = Math.floor(1000 + Math.random() * 9000)
+    const hashedOtp = await bcrypt.hash(otp.toString(), 10)
+    const checkOtp = await UserOtpVerification.findOne({ email })
+    if (checkOtp) {
+      await UserOtpVerification.findOneAndUpdate( { email } , { otp: hashedOtp }, { upsert: true })
+    } else {
+      await UserOtpVerification.create({
+        email,
+        otp: hashedOtp
+      })
+    }
+    await sendOtpVerification(email, otp)
+    res.status(200).json({ message: "OTP send successfully!" })
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}
+
+// then verify user otp then reset user password
+
+const ResetUserPassword = async (req, res) => {
+  const { new_password } = req.body
+  try {
+    if (!new_password) {
+      return res.status(400).json({ message: "New passowrd is required" })
+    }
+    const user = User.findById(req.user.id)
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" })
+    }
+    const hashedPassword = await bcrypt.hash(new_password, 10)
+    user.password = hashedPassword
+    await user.save()
+    res.status(200).json({ message: "Password reset successfully!" })
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -505,5 +575,8 @@ module.exports = {
   resetPassword,
   UserRegister,
   UserLogin,
-  VerifyUserOtp
+  VerifyUserOtp,
+  UpdateUserPassword,
+  ForgotUserPassword,
+  ResetUserPassword
 };

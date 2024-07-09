@@ -36,7 +36,6 @@ exports.addProduct = async (req, res) => {
       vendorId,
       images,
     });
-
     await product.save();
     res.status(201).json({ message: "Product added successfully", product });
   } catch (error) {
@@ -154,7 +153,7 @@ exports.getProductsByVendorId = async (req, res) => {
 
     const products = await Product.find({ vendorId }).sort({
       createdAt: -1,
-    });
+    }).populate(['category', 'subCategory']);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,
@@ -225,7 +224,7 @@ exports.removeProduct = async (req, res) => {
 exports.getProudctById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findById(id).select("-__v");
+    const product = await Product.findById(id).select("-__v").populate(['category', 'subCategory']);
 
     if (!product) {
       return res.status(404).json({ error: "Product not found" });

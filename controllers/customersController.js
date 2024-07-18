@@ -124,10 +124,15 @@ const getCustomer = async (req, res) => {
 
     const totalCustomers = await Customer.countDocuments(query);
 
+    const customersWithNames = customers.map((customer) => ({
+      ...customer._doc,
+      name: { name: customer.name, id: customer._id },
+    }));
+
     res.status(200).json({
       message: "Customers retrieved successfully",
       success: true,
-      customers,
+      customers: customersWithNames,
       totalPages: Math.ceil(totalCustomers / limit),
       currentPage: parseInt(page),
     });
@@ -137,7 +142,111 @@ const getCustomer = async (req, res) => {
   }
 };
 
+const updateCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = {
+      name: req.body.name,
+      number: req.body.number,
+      vendorId: req.body.vendorId,
+      owner: req.body.owner,
+      stop: req.body.stop,
+      active: req.body.active,
+      cashCustomer: req.body.cashCustomer,
+      canTakePayments: req.body.canTakePayments,
+      addressLine1: req.body.addressLine1,
+      addressLine2: req.body.addressLine2,
+      city: req.body.city,
+      country: req.body.country,
+      postCode: req.body.postCode,
+      email: req.body.email,
+      fax: req.body.fax,
+      telephone: req.body.telephone,
+      website: req.body.website,
+      type: req.body.type,
+      industry: req.body.industry,
+      status: req.body.status,
+      taxClass: req.body.taxClass,
+      parentAccount: req.body.parentAccount,
+      invoiceRunCode: req.body.invoiceRunCode,
+      paymentTerm: req.body.paymentTerm,
+    };
+
+    if (req.file) {
+      updateData.thumbnail = req.file.path;
+    }
+
+    const customer = await Customer.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        message: "Customer not found",
+        success: false,
+      });
+    }
+
+    res.status(200).json({
+      message: "Customer updated successfully",
+      success: true,
+      customer,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const customer = await Customer.findByIdAndDelete(id);
+
+    if (!customer) {
+      return res.status(404).json({
+        message: "Customer not found",
+        success: false,
+      });
+    }
+
+    res.status(200).json({
+      message: "Customer deleted successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const customer = await Customer.findById(id);
+
+    if (!customer) {
+      return res.status(404).json({
+        message: "Customer not found",
+        success: false,
+      });
+    }
+
+    res.status(200).json({
+      message: "Customer retrieved successfully",
+      success: true,
+      customer,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   addCustomer: [upload.single("thumbnail"), addCustomer],
   getCustomer,
+  updateCustomer: [upload.single("thumbnail"), updateCustomer],
+  deleteCustomer,
+  getCustomerById,
 };

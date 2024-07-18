@@ -36,10 +36,13 @@ exports.addProductReview = async (req, res) => {
     const productId = new mongoose.Types.ObjectId("60d5ec49f2914c001c8e4d1a");
     const userId = new mongoose.Types.ObjectId("60d5ec49f2914c001c8e4d1b");
 
+    const images = req.files.map((file) => file.path);
+
     const newReview = new productReviewModel({
       title,
       description,
       rating,
+      images,
       product_id: productId,
       user_id: userId,
     });
@@ -65,9 +68,16 @@ exports.updateProductReview = async (req, res) => {
   }
 
   try {
+    const prevImages = await productReviewModel.findById(_id);
+
+    let images =
+      req.files && req.files.length > 0
+        ? prevImages.images.concat(req.files.map((file) => file.path))
+        : prevImages.images;
+
     const updatedReview = await productReviewModel.findByIdAndUpdate(
       _id,
-      { title, description, rating },
+      { title, description, rating, images },
       { new: true }
     );
 
@@ -98,4 +108,24 @@ exports.deleteProductReview = async (req, res) => {
   } catch (error) {
     return errorResponse(res, { message: "Server Error", data: error });
   }
+};
+
+exports.deleteReviewImage = async (req, res) => {
+  const { image_url } = req.body;
+
+  const id = req.params.id;
+
+  try {
+    const reviews = await productReviewModel.findById(id);
+
+    if (!reviews) {
+      return errorResponse(res, { message: "review not found!", code: 404 });
+    }
+
+    reviews.images = reviews.images.filter((img) => img !== image_url);
+
+    await reviews.save();
+
+    return successResponse(res, { message: "image deleted successfully." });
+  } catch (error) {}
 };

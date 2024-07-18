@@ -18,6 +18,7 @@ const ProductReviewSchema = new Schema(
       min: 1,
       max: 5,
     },
+    images: [{ type: String }],
     product_id: {
       type: SchemaTypes.ObjectId,
       ref: "Product",

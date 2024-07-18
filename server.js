@@ -20,6 +20,8 @@ app.use("/api", require("./routes/adminRoutes"));
 app.use("/api", require("./routes/authRoutes"));
 app.use("/api", require("./routes/productRoutes"));
 app.use("/api", require("./routes/categoriesRoutes"));
+app.use("/api", require("./routes/reviewRoutes"));
+
 // Middleware to parse JSON bodies
 
 app.listen(port, () => console.log(`server connnected on port ${port} `));

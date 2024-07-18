@@ -5,9 +5,9 @@ const InvoiceSchema = new mongoose.Schema(
     products: [
       {
         productName: { type: String, required: true },
-        companyProductName: { type: String, required: true },
-        productDescription: { type: String, required: true },
-        category: { type: String, required: true },
+        companyProductName: { type: String },
+        productDescription: { type: String },
+        category: { type: String },
         totalRentPrice: { type: Number },
         start_date: { type: Date },
         end_date: { type: Date },

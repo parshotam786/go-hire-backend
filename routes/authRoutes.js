@@ -5,6 +5,7 @@ const {
   AdminRegister,
   AdminDirectory,
   VenderRegister,
+  UserProfile,
   VenderLogin,
   updateVenderStatus,
   VenderDirectory,
@@ -18,14 +19,24 @@ const {
   UpdateUserPassword,
   ForgotUserPassword,
   ResetUserPassword,
+  updateProfilePicture,
+  getProfilePicture,
+  updateUserdata,
+  updateVendorStatus,
+  removeVenderAccount,
 } = require("../controllers/authController");
-const { protect } = require("../middleware/authMiddleware");
-// const {
-//   addProduct,
-//   ProductList,
-//   getProductsByVendorId,
-//   removeProduct,
-// } = require("../controllers/productController");
+const { protect } = require("../middleware/authMiddleware")
+const {
+  invoiceAddData,
+  GetInvoiceListById,
+  getInvoiceById,
+} = require("../controllers/invoiceController");
+const {
+  addProduct,
+  ProductList,
+  getProductsByVendorId,
+  removeProduct,
+} = require("../controllers/productController");
 // const router = require("express").Router();
 // const path = require("path");
 
@@ -69,7 +80,15 @@ router.post("/user-verify", VerifyUserOtp);
 router.post("/user-update-password/:id", protect, UpdateUserPassword);
 router.post("/user-forgot-password", ForgotUserPassword);
 router.post("/user-reset-password", protect, ResetUserPassword);
-
+router.get("/vender/profile/:id", UserProfile);
+router.put("/vender/profile-picture/:id", updateProfilePicture);
+router.get("/vender/profile-picture/:id", getProfilePicture);
+router.delete("/vender/:id", removeVenderAccount);
+router.put("/vender/:id", updateUserdata);
+router.put("/vender/update-status/:id", updateVendorStatus);
+router.post("/vender/invoice", invoiceAddData);
+router.get("/vender/invoice/list/:id", GetInvoiceListById);
+router.get("/vender/invoice/list/view/:id", getInvoiceById);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

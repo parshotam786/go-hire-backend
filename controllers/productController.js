@@ -1,5 +1,6 @@
 const Product = require("../models/productModel");
 
+// Add Product Api
 exports.addProduct = async (req, res) => {
   try {
     const {
@@ -35,7 +36,6 @@ exports.addProduct = async (req, res) => {
       vendorId,
       images,
     });
-
     await product.save();
     res.status(201).json({ message: "Product added successfully", product });
   } catch (error) {
@@ -45,6 +45,7 @@ exports.addProduct = async (req, res) => {
   }
 };
 
+// Update Product Api
 exports.updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -66,12 +67,9 @@ exports.updateProduct = async (req, res) => {
     } = req.body;
 
     const existImage = await Product.findById(productId).select("images");
-    console.log({ existImage });
-
-    // Check if req.files exists and properly handle the images
     let images =
       req.files && req.files.length > 0
-        ? req.files.map((file) => file.path)
+        ? existImage.images.concat(req.files.map((file) => file.path))
         : existImage.images;
 
     const updateFields = {
@@ -88,10 +86,9 @@ exports.updateProduct = async (req, res) => {
       maxStock,
       subCategory,
       vendorId,
-      images, // Only add images if they are provided
+      images,
     };
 
-    // Remove undefined fields from the updateFields object
     Object.keys(updateFields).forEach(
       (key) => updateFields[key] === undefined && delete updateFields[key]
     );
@@ -137,6 +134,7 @@ exports.deleteProductImage = async (req, res) => {
   }
 };
 
+// Get All Product List
 exports.ProductList = async (req, res) => {
   const products = await Product.find().populate();
   res.status(200).json({
@@ -144,6 +142,7 @@ exports.ProductList = async (req, res) => {
     data: products,
   });
 };
+// Get all product list of specific user
 exports.getProductsByVendorId = async (req, res) => {
   try {
     const { vendorId } = req.body;
@@ -152,12 +151,15 @@ exports.getProductsByVendorId = async (req, res) => {
       return res.status(400).json({ error: "Vendor ID is required" });
     }
 
-    const products = await Product.find({ vendorId });
+    const products = await Product.find({ vendorId }).sort({
+      createdAt: -1,
+    }).populate(['category', 'subCategory']);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,
       companyProductName: product.companyProductName,
       productDescription: product.productDescription,
+      productName: product.productName,
       category: product.category,
       sub_category: product.subCategory,
       status: product.status,
@@ -182,7 +184,7 @@ exports.getProductsByVendorId = async (req, res) => {
       .json({ error: "Error fetching products", details: error.message });
   }
 };
-
+// Remove product from data base
 exports.removeProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -218,10 +220,11 @@ exports.removeProduct = async (req, res) => {
 //   }
 // };
 
+// Get detail product by id
 exports.getProudctById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findById(id).select("-__v");
+    const product = await Product.findById(id).select("-__v").populate(['category', 'subCategory']);
 
     if (!product) {
       return res.status(404).json({ error: "Product not found" });

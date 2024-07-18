@@ -102,6 +102,9 @@ const VenderSchema = new mongoose.Schema(
       type: String,
       default: "inactive",
     },
+    rating: {
+      type: Number,
+    },
   },
   { timestamps: true }
 );

@@ -19,6 +19,8 @@ const InvoiceSchema = new mongoose.Schema(
         isActive: { type: String, default: "Active" },
       },
     ],
+    invoiceDate: { type: String },
+    InvoiceNumber: { type: String },
     //     billing
     address: { type: String },
     city: { type: String },

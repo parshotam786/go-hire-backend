@@ -11,6 +11,7 @@ const routes = [
   "productRoutes",
   "categoriesRoutes",
   "reviewRoutes",
+  
 ];
 const app = express();
 app.use(cors());
@@ -28,6 +29,8 @@ routes.forEach((route) => {
 });
 
 app.use("/api/public", require("./routes/publicRoutes"));
+app.use("/api/order", require("./routes/orderRoutes"));
+
 
 // Middleware to parse JSON bodies
 

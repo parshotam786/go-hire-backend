@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const itemsSchema=new mongoose.Schema({
   product:{type: mongoose.Schema.Types.ObjectId,
-  ref: "Products",},
+  ref: "Product",},
   quantity:{ type: Number, default: 1 },
   rate:{type:String},
   price:{type:Number},
@@ -12,8 +12,8 @@ const itemsSchema=new mongoose.Schema({
 const orderSchema = new mongoose.Schema(
   {
     orderId: { type: String, required: true, },
-    vendorId: { type: mongoose.Schema.Types.ObjectId, default: null , required: true},
-    customerId: { type: mongoose.Schema.Types.ObjectId, default: null , required: true},
+    vendorId: { type: mongoose.Schema.Types.ObjectId, default: null , required: true, ref:'Vender'},
+    customerId: { type: mongoose.Schema.Types.ObjectId, default: null , required: true,ref:'Vender'},
     account: { type: String, default: '' },
     billingPlaceName: { type: String, default: '' },
     address1: { type: String, default: '' },

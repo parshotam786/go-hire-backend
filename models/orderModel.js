@@ -18,11 +18,13 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
       required: true,
+      ref: "Vender",
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,
       required: true,
+      ref: "Vender",
     },
     account: { type: String, default: "" },
     billingPlaceName: { type: String, default: "" },

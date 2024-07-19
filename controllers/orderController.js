@@ -19,11 +19,12 @@ const getOrder = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
-  const findOrders = await Order.find();
-  if (!findOrders) {
-    return res.status(404).json({ error: "Orders not found" });
-  }
-  return res.status(200).json({ data: findOrders, user: req?.user ?? null });
+  const findOrders = await Order.find({ vendorId: req.user?._id }).populate([
+    "products.product",
+    "customerId",
+  ]);
+
+  return res.status(200).json({ data: findOrders });
 };
 const createOrder = async (req, res) => {
   const { account, vendorId, customerId } = req.body;
@@ -66,6 +67,21 @@ const addProductInOrder = async (req, res) => {
 
     if (["price", "quantity"].includes(key) && validation[key] <= 0) {
       return res.status(400).json({ error: `${key} must be greater than 0` });
+    }
+    try {
+      const updated = await Order.findOneAndUpdate(
+        { _id: orderId },
+        { $addToSet: { products: { ...rest, status: "allocated" } } },
+        { new: true }
+      ).populate("products.product");
+      if (updated) {
+        return res.status(200).json({ data: updated });
+      }
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to add product in order",
+        error: error.message,
+      });
     }
   }
   if (!orderId) {

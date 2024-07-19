@@ -10,6 +10,7 @@ const routes = [
   "authRoutes",
   "productRoutes",
   "categoriesRoutes",
+  "reviewRoutes",
 ];
 const app = express();
 app.use(cors());
@@ -27,6 +28,7 @@ routes.forEach((route) => {
 });
 
 app.use("/api/public", require("./routes/publicRoutes"));
+
 // Middleware to parse JSON bodies
 
 app.listen(port, () => console.log(`server connnected on port ${port} `));

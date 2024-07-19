@@ -3,6 +3,7 @@ const dotenv = require("dotenv").config();
 const connectDB = require("./config/db"); // Adjust the path as necessary
 var cors = require("cors");
 const path = require("path");
+const { authenticateUser } = require("./utiles/userAccessMiddleware");
 const port = process.env.PORT || 5000;
 const routes = [
   "customersRoutes",
@@ -29,7 +30,7 @@ routes.forEach((route) => {
 });
 
 app.use("/api/public", require("./routes/publicRoutes"));
-app.use("/api/order", require("./routes/orderRoutes"));
+app.use("/api/order", authenticateUser,require("./routes/orderRoutes"));
 
 
 // Middleware to parse JSON bodies

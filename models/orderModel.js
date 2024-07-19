@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 
-// const itemsSchema=new mongoose.S
+const itemsSchema=new mongoose.Schema({
+  product:{type: mongoose.Schema.Types.ObjectId,
+  ref: "Products",},
+  quantity:{ type: Number, default: 1 },
+  rate:{type:String},
+  price:{type:Number},
+  status:{type:String}
+},{timestamps:true})
 
 const orderSchema = new mongoose.Schema(
   {
@@ -31,7 +38,7 @@ const orderSchema = new mongoose.Schema(
     invoiceRunCode: { type: String, default: '' },
     paymentTerm: { type: String, default: '' },
     billingPeriod: { type: String, default: '' },
-    products:{type:Array,default:[]},
+    products: { type: [itemsSchema], default: [] }
 
   },
   { timestamps: true }

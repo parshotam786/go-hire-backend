@@ -1,6 +1,9 @@
 const multer = require("multer");
 const path = require("path");
 const Customer = require("../models/customers");
+const Order = require("../models/orderModel");
+const { errorResponse, successResponse } = require("../utiles/responses");
+const { default: mongoose } = require("mongoose");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -201,32 +204,63 @@ const updateCustomer = async (req, res) => {
 const deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const customer = await Customer.findByIdAndDelete(id);
-
-    if (!customer) {
-      return res.status(404).json({
-        message: "Customer not found",
-        success: false,
-      });
+    const isCustomer = await Customer.findById(id);
+    if (!isCustomer) {
+      return errorResponse(res, { message: "Customer not found!" });
     }
 
-    res.status(200).json({
-      message: "Customer deleted successfully",
-      success: true,
-    });
+    await Customer.findByIdAndDelete(id);
+    await Order.deleteMany({ customerId: id });
+
+    return successResponse(res, { message: "Customer deleted successfully." });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: error.message });
+    return errorResponse(res, { message: error?.message || "Server Error!" });
   }
 };
 
 const getCustomerById = async (req, res) => {
   try {
     const { id } = req.params;
-    const customer = await Customer.findById(id);
 
-    if (!customer) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid customer ID",
+        success: false,
+      });
+    }
+
+    // const customer = await Customer.findById(id);
+
+    // if (!customer) {
+    //   return res.status(404).json({
+    //     message: "Customer not found",
+    //     success: false,
+    //   });
+    // }
+
+    const objectId = mongoose.mongo.ObjectId.createFromHexString(id);
+
+    const customerWithOrders = await Customer.aggregate([
+      {
+        $match: { _id: objectId },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "customerId",
+          as: "orders",
+        },
+      },
+      {
+        $addFields: {
+          numOfOrders: { $size: "$orders" },
+        },
+      },
+    ]);
+
+    if (customerWithOrders.length === 0) {
       return res.status(404).json({
         message: "Customer not found",
         success: false,
@@ -236,13 +270,14 @@ const getCustomerById = async (req, res) => {
     res.status(200).json({
       message: "Customer retrieved successfully",
       success: true,
-      customer,
+      customer: customerWithOrders[0],
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
+
 module.exports = {
   addCustomer: [upload.single("thumbnail"), addCustomer],
   getCustomer,

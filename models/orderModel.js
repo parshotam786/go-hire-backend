@@ -24,7 +24,7 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null,
       required: true,
-      ref: "Vender",
+      ref: "Customers",
     },
     account: { type: String, default: "" },
     billingPlaceName: { type: String, default: "" },
@@ -51,6 +51,10 @@ const orderSchema = new mongoose.Schema(
     paymentTerm: { type: String, default: "" },
     billingPeriod: { type: String, default: "" },
     products: { type: [itemsSchema], default: [] },
+    status: {
+      type: String,
+      default: "Open",
+    },
   },
   { timestamps: true }
 );

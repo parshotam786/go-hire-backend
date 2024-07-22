@@ -45,7 +45,7 @@ const addCustomer = async (req, res) => {
       paymentTerm,
     } = req.body;
 
-    const thumbnail = req.file ? req.file.path : "/images/default-image.png";
+    const thumbnail = req.file ? req.file.path : "images/default-image.png";
 
     const customer = new Customer({
       name,

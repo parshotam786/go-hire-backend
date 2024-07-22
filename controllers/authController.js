@@ -37,7 +37,7 @@ const AdminLogin = async (req, res) => {
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       "your_jwt_secret",
-      { expiresIn: "1h" }
+      { expiresIn: "30d" }
     );
     res.send({
       message: "Login successful",
@@ -131,7 +131,7 @@ const VenderLogin = async (req, res) => {
     const token = jwt.sign(
       { _id: vender._id, role: vender.role },
       "your_jwt_secret",
-      { expiresIn: "1h" }
+      { expiresIn: "30d" }
     );
     res.send({
       message: "Login successful",

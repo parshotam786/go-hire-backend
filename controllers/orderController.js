@@ -19,10 +19,12 @@ const getOrder = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
+  const page= req?.query?.page ?? 1
+  const limit= (req?.query?.limit ?? 30)
   const findOrders = await Order.find({ vendorId: req.user?._id }).populate([
     "products.product",
     "customerId",
-  ]);
+  ]).sort('-createdAt').skip(((page - 1)* limit)).limit(limit)
 
   return res.status(200).json({ data: findOrders });
 };
@@ -48,6 +50,19 @@ const createOrder = async (req, res) => {
       success: true,
     });
   }
+};
+
+// Get Customer Orders
+const getCustomerOrders = async (req, res) => {
+  const page= req?.query?.page ?? 1
+  const limit= (req?.query?.limit ?? 30)
+  console.log('a',page,limit)
+  const findOrders = await Order.find({ vendorId: req.user?._id }).populate([
+    "products.product",
+    "customerId",
+  ]).sort('-createdAt').skip(((page - 1)* limit)).limit(limit)
+
+  return res.status(200).json({ data: findOrders });
 };
 
 const addProductInOrder = async (req, res) => {

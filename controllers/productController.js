@@ -1,4 +1,5 @@
 const Product = require("../models/productModel");
+const Category = require("../models/categoriesModal");
 
 // Add Product Api
 exports.addProduct = async (req, res) => {
@@ -190,6 +191,7 @@ exports.getProductsByVendorId = async (req, res) => {
       isActive: product.isActive,
       title: product.productName,
     }));
+    console.log({transformedProducts})
 
     res.status(200).json({
       success: true,
@@ -315,3 +317,87 @@ exports.getProductsBySearch = async (req, res) => {
       .json({ error: "Error fetching products", details: error.message });
   }
 };
+// get products available 
+exports.getProductAvailability = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, vendorId, startDate, endDate, categoryName, type, quote } = req.query;
+
+    const query = { vendorId };
+    
+    if (!vendorId) {
+      return res.status(400).json({ error: "Vendor ID is required" })
+    }
+
+    if (categoryName) {
+      const category = await Category.findOne({ name: categoryName });
+      if (category) {
+        query.category = category._id;
+      } else {
+        return res.status(404).json({ error: "Category not found" });
+      }
+    }
+
+    if (type) {
+      if (type === 'rent') {
+        query.status = { $regex: /^Rental/i };
+      } else if (type === 'sale') {
+        query.status = { $regex: /^Sale/i };
+      }
+    }
+
+    if (quote === 'yes') {
+      query.quote = { $exists: true, $ne: null };
+    } else if (quote === 'no') {
+      query.quote = null;
+    }
+
+    if (startDate && endDate) {
+      query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+      query.updatedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    
+    const products = await Product.find(query)
+      .populate('category', 'name')
+      .populate('subCategory', 'name')
+      .skip( (page - 1) * limit )
+      .limit(parseInt(limit))
+      .exec();
+
+      const totalProducts = await Product.countDocuments(query);
+      res.status(200).json({
+        message: "Products retrieved successfully",
+        success: true,
+        data: products,
+        totalPages: Math.ceil(totalProducts / limit),
+        currentPage: parseInt(page)
+      })
+
+    // res.status(200).json({ data: products });
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}
+
+exports.getStockView = async (req, res) => {
+  try {
+    const { category } = req.query
+        
+    if (!category) {
+      return res.status(400).json({ error: "Category ID is required" })
+    }
+
+    const categoryIds = category.split(",");
+
+    const categoryObjectIds = categoryIds.map((id) => id.trim(' '));
+
+    const products = await Product.find({ category: { $in: categoryObjectIds } })
+
+    if (!products || products.length == 0) {
+      return res.status(400).json({ error: "Product not found" })
+    }
+
+    res.status(200).json({ data: products })
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}

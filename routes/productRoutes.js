@@ -7,6 +7,8 @@ const {
   getProudctById,
   deleteProductImage,
   getProductsBySearch,
+  getProductAvailability,
+  getStockView,
 } = require("../controllers/productController");
 const multer = require("multer");
 const router = require("express").Router();
@@ -48,5 +50,8 @@ router.delete("/product/:productId/image", deleteProductImage);
 router.get("/product-list", ProductList);
 router.post("/product-lists", getProductsByVendorId);
 router.get("/product/list", getProductsBySearch);
+
+router.get("/product-availability", getProductAvailability);
+router.get("/product-stock", getStockView);
 
 module.exports = router;

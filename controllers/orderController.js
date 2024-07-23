@@ -144,7 +144,7 @@ const deleteProductFromOrder = async (req, res) => {
     await isOrder.save();
 
     return successResponse(res, {
-      message: "product deleted successfully from order.",
+      message: "Item removed successfully.",
     });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });

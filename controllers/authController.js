@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const upload = require("../utiles/multerConfig");
 const Order = require("../models/orderModel");
+const Product = require("../models/productModel");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -381,6 +382,10 @@ const removeVenderAccount = async (req, res) => {
           //  { session }
         ),
         Order.deleteMany(
+          { vendorId: id }
+          // { session }
+        ),
+        Product.deleteMany(
           { vendorId: id }
           // { session }
         ),

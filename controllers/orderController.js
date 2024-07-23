@@ -145,7 +145,7 @@ const deleteProductFromOrder = async (req, res) => {
 
     return successResponse(res, {
       message: "Item removed successfully.",
-      data: { productId, results },
+      data: { productId, orderId, results },
     });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });

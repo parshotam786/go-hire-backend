@@ -27,7 +27,11 @@ const productSchema = new mongoose.Schema(
     range: { type: String },
     vat: { type: String },
     rate: { type: String },
-    vendorId: { type: String, required: true },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Vender",
+    },
     images: [{ type: String, required: true }],
     isActive: { type: String, default: "Active" },
     rating: { type: Number },

@@ -1,8 +1,10 @@
 const Admin = require("../models/adminModel");
 const Vender = require("../models/venderModel");
+const Customer = require("../models/customers");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const upload = require("../utiles/multerConfig");
+const Order = require("../models/orderModel");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -363,13 +365,19 @@ const removeVenderAccount = async (req, res) => {
       return res.status(400).json({ message: "Vendor ID is required" });
     }
 
-    const Vendor = await Vender.findByIdAndDelete(id);
+    const Vendor = await Vender.findById(id);
 
     if (!Vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    res.status(200).json({
+    await Promise.all([
+      Customer.deleteMany({ vendorId: id }),
+      Order.deleteMany({ vendorId: id }),
+      Vender.findByIdAndDelete(id),
+    ]);
+
+    return res.status(200).json({
       success: true,
       message: "Vendor Account Deleted successfully",
     });
@@ -379,6 +387,7 @@ const removeVenderAccount = async (req, res) => {
       .json({ error: "Error removing Vendor", details: error.message });
   }
 };
+
 module.exports = {
   AdminLogin,
   AdminRegister,

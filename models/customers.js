@@ -81,7 +81,9 @@ const CustomersSchema = new mongoose.Schema({
     type: String,
   },
   vendorId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "Vender",
   },
 });
 

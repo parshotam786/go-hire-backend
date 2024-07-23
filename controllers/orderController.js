@@ -141,10 +141,11 @@ const deleteProductFromOrder = async (req, res) => {
       (product) => product._id.toString() !== productId
     );
 
-    await isOrder.save();
+    const results = await isOrder.save();
 
     return successResponse(res, {
       message: "Item removed successfully.",
+      data: { productId, results },
     });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });

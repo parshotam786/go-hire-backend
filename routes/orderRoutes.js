@@ -4,6 +4,8 @@ const {
   createOrder,
   getAllOrders,
   addProductInOrder,
+  deleteCustomerOrder,
+  deleteProductFromOrder,
 } = require("../controllers/orderController");
 const allowedRoles = require("../utiles/allowRoles");
 
@@ -17,5 +19,8 @@ router.patch(
   // allowedRoles(['Vendor']),
   addProductInOrder
 );
+
+router.put("/product", deleteProductFromOrder);
+router.delete("/customer/:id", deleteCustomerOrder);
 
 module.exports = router;

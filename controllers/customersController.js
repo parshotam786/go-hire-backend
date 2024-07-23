@@ -278,34 +278,10 @@ const getCustomerById = async (req, res) => {
   }
 };
 
-const deleteCustomerOrder = async (req, res) => {
-  const { id } = req.params;
-  const { customerId } = req.body;
-
-  try {
-    if (!customerId) {
-      return errorResponse(res, { message: "customer id required!" });
-    }
-
-    const isOrder = await Order.findOne({ _id: id, customerId: customerId });
-
-    if (!isOrder) {
-      return errorResponse(res, { message: "Order not found!" });
-    }
-
-    await Order.deleteOne({ _id: id, customerId: customerId });
-
-    return successResponse(res, { message: "Order deleted successfully" });
-  } catch (error) {
-    return errorResponse(res, { message: error?.message || "Server Error!" });
-  }
-};
-
 module.exports = {
   addCustomer: [upload.single("thumbnail"), addCustomer],
   getCustomer,
   updateCustomer: [upload.single("thumbnail"), updateCustomer],
   deleteCustomer,
   getCustomerById,
-  deleteCustomerOrder,
 };

@@ -1,4 +1,8 @@
 const Order = require("../models/orderModel");
+const Product = require("../models/productModel");
+
+const { errorResponse, successResponse } = require("../utiles/responses");
+
 const generateAlphanumericId = (length = 8) => {
   return Math.random()
     .toString(36)
@@ -19,12 +23,13 @@ const getOrder = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
-  const page= req?.query?.page ?? 1
-  const limit= (req?.query?.limit ?? 30)
-  const findOrders = await Order.find({ vendorId: req.user?._id }).populate([
-    "products.product",
-    "customerId",
-  ]).sort('-createdAt').skip(((page - 1)* limit)).limit(limit)
+  const page = req?.query?.page ?? 1;
+  const limit = req?.query?.limit ?? 30;
+  const findOrders = await Order.find({ vendorId: req.user?._id })
+    .populate(["products.product", "customerId"])
+    .sort("-createdAt")
+    .skip((page - 1) * limit)
+    .limit(limit);
 
   return res.status(200).json({ data: findOrders });
 };
@@ -54,13 +59,14 @@ const createOrder = async (req, res) => {
 
 // Get Customer Orders
 const getCustomerOrders = async (req, res) => {
-  const page= req?.query?.page ?? 1
-  const limit= (req?.query?.limit ?? 30)
-  console.log('a',page,limit)
-  const findOrders = await Order.find({ vendorId: req.user?._id }).populate([
-    "products.product",
-    "customerId",
-  ]).sort('-createdAt').skip(((page - 1)* limit)).limit(limit)
+  const page = req?.query?.page ?? 1;
+  const limit = req?.query?.limit ?? 30;
+  console.log("a", page, limit);
+  const findOrders = await Order.find({ vendorId: req.user?._id })
+    .populate(["products.product", "customerId"])
+    .sort("-createdAt")
+    .skip((page - 1) * limit)
+    .limit(limit);
 
   return res.status(200).json({ data: findOrders });
 };
@@ -120,9 +126,60 @@ const addProductInOrder = async (req, res) => {
   }
 };
 
+const deleteProductFromOrder = async (req, res) => {
+  const { orderId, productId } = req.body;
+
+  const vendorId = req.user._id;
+
+  try {
+    let isOrder = await Order.findOne({ _id: orderId, vendorId: vendorId });
+
+    if (!isOrder)
+      return errorResponse(res, { message: "order not found or removed!" });
+
+    isOrder.products = isOrder.products.filter(
+      (product) => product._id.toString() !== productId
+    );
+
+    await isOrder.save();
+
+    return successResponse(res, {
+      message: "product deleted successfully from order.",
+    });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
+const deleteCustomerOrder = async (req, res) => {
+  const { id: _id } = req.params;
+  const { customerId } = req.body;
+  const vendorId = req.user._id;
+
+  try {
+    if (!customerId) {
+      return errorResponse(res, { message: "customer id required!" });
+    }
+
+    const isOrder = await Order.findOne({ _id, customerId, vendorId });
+
+    if (!isOrder) {
+      return errorResponse(res, { message: "Order not found!" });
+    }
+
+    await Order.deleteOne({ _id, customerId, vendorId });
+
+    return successResponse(res, { message: "Order deleted successfully" });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
 module.exports = {
   getOrder,
   createOrder,
   getAllOrders,
   addProductInOrder,
+  deleteCustomerOrder,
+  deleteProductFromOrder,
 };

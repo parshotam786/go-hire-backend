@@ -365,26 +365,47 @@ const removeVenderAccount = async (req, res) => {
       return res.status(400).json({ message: "Vendor ID is required" });
     }
 
-    const Vendor = await Vender.findById(id);
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
 
-    if (!Vendor) {
-      return res.status(404).json({ message: "Vendor not found" });
+    try {
+      const Vendor = await Vender.findById(id);
+
+      if (!Vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      await Promise.all([
+        Customer.deleteMany(
+          { vendorId: id }
+          //  { session }
+        ),
+        Order.deleteMany(
+          { vendorId: id }
+          // { session }
+        ),
+        Vender.findByIdAndDelete(
+          id
+          // { session }
+        ),
+      ]);
+
+      // await session.commitTransaction();
+      return res.status(200).json({
+        success: true,
+        message: "Vendor Account Deleted successfully",
+      });
+    } catch (error) {
+      // await session.abortTransaction();
+      console.error("Error removing Vendor:", error);
+      return res
+        .status(500)
+        .json({ error: "Error removing Vendor", details: error.message });
+    } finally {
+      // session.endSession();
     }
-
-    await Promise.all([
-      Customer.deleteMany({ vendorId: id }),
-      Order.deleteMany({ vendorId: id }),
-      Vender.findByIdAndDelete(id),
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: "Vendor Account Deleted successfully",
-    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error removing Vendor", details: error.message });
+    res.status(500).json({ error: "Unexpected error", details: error.message });
   }
 };
 

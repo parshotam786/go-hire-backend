@@ -8,6 +8,7 @@ const {
   deleteProductFromOrder,
   getOrderProduct,
   allocateOrderProducts,
+  updateOrderProduct,
 } = require("../controllers/orderController");
 const allowedRoles = require("../utiles/allowRoles");
 
@@ -26,5 +27,6 @@ router.get("/product/:id", getOrderProduct);
 router.put("/product", deleteProductFromOrder);
 router.put("/customer", deleteCustomerOrder);
 router.put("/product/status", allocateOrderProducts);
+router.put("/update-product-items", updateOrderProduct);
 
 module.exports = router;

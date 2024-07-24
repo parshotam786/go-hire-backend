@@ -238,6 +238,7 @@ const UserProfile = async (req, res) => {
 };
 
 const updateProfilePicture = (req, res) => {
+  console.log("text");
   upload(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: err });

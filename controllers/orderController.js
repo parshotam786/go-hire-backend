@@ -90,8 +90,6 @@ const addProductInOrder = async (req, res) => {
       return res.status(400).json({ error: `${key} must be greater than 0` });
     }
     try {
-      const isExists = await Order.findOne({});
-
       const updated = await Order.findOneAndUpdate(
         { _id: orderId },
         { $addToSet: { products: { ...rest, status: "reserved" } } },
@@ -200,18 +198,19 @@ const getOrderProduct = async (req, res) => {
 };
 
 const updateOrderProduct = async (req, res) => {
-  const { orderId, productId, ...rest } = req.body;
+  const { orderId, itemId, productId, ...rest } = req.body;
   const vendorId = req.user._id;
 
   const updatedProduct = {
     quantity: rest?.quantity,
     rate: rest?.rate,
     price: rest?.price,
+    status: rest?.status, // make sure to include status if it's part of the update
   };
 
   try {
-    const result = await Order.updateOne(
-      { _id: orderId, vendorId, "products._id": productId },
+    const updateResult = await Order.updateOne(
+      { _id: orderId, vendorId, "products._id": itemId },
       {
         $set: {
           "products.$.quantity": updatedProduct.quantity,
@@ -219,8 +218,36 @@ const updateOrderProduct = async (req, res) => {
           "products.$.price": updatedProduct.price,
           "products.$.status": updatedProduct.status,
         },
-      }
+      },
+      { new: true }
     );
+
+    // const updatedProduct = await Product.updateOne({_id:productId,vendorId},{
+    //   productName:rest.productName,
+
+    // })
+
+    if (updateResult.nModified === 0) {
+      return errorResponse(res, {
+        message: "No product was updated. Please check the provided details.",
+      });
+    }
+
+    const updatedOrder = await Order.findOne(
+      { _id: orderId, vendorId, "products._id": itemId },
+      { "products.$": 1 }
+    );
+
+    if (!updatedOrder) {
+      return errorResponse(res, { message: "Order or product not found." });
+    }
+
+    const updatedProductFields = updatedOrder.products[0];
+
+    return successResponse(res, {
+      message: "Product updated successfully.",
+      data: updatedProductFields,
+    });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });
   }
@@ -297,6 +324,7 @@ module.exports = {
   getAllOrders,
   getOrderProduct,
   addProductInOrder,
+  updateOrderProduct,
   deleteCustomerOrder,
   allocateOrderProducts,
   deleteProductFromOrder,

@@ -246,14 +246,14 @@ exports.getProudctById = async (req, res) => {
       .populate(["category", "subCategory"]);
 
     if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+      return res
+        .status(404)
+        .json({ message: "Product not found", success: false });
     }
 
-    res.status(200).json({ product });
+    res.status(200).json({ product, success: true });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error retrieving product", details: error.message });
+    res.status(500).json({ success: false });
   }
 };
 

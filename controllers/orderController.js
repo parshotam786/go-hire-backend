@@ -90,9 +90,11 @@ const addProductInOrder = async (req, res) => {
       return res.status(400).json({ error: `${key} must be greater than 0` });
     }
     try {
+      const isExists = await Order.findOne({});
+
       const updated = await Order.findOneAndUpdate(
         { _id: orderId },
-        { $addToSet: { products: { ...rest, status: "allocated" } } },
+        { $addToSet: { products: { ...rest, status: "reserved" } } },
         { new: true }
       ).populate("products.product");
       if (updated) {
@@ -153,8 +155,7 @@ const deleteProductFromOrder = async (req, res) => {
 };
 
 const deleteCustomerOrder = async (req, res) => {
-  const { id: _id } = req.params;
-  const { customerId } = req.body;
+  const { customerId, orderId: _id } = req.body;
   const vendorId = req.user._id;
 
   try {
@@ -176,11 +177,127 @@ const deleteCustomerOrder = async (req, res) => {
   }
 };
 
+const getOrderProduct = async (req, res) => {
+  const { id } = req.params;
+  const { order_Id } = req.query;
+  const { _id: vendorId } = req.user;
+
+  try {
+    const isOrder = await Order.findOne({ _id: order_Id, vendorId });
+
+    if (!isOrder) return errorResponse(res, { message: "product not found!" });
+
+    const isProduct = isOrder.products.find(
+      (product) => product._id.toString() === id
+    );
+
+    if (!isProduct) return errorResponse(res, { message: "product not found" });
+
+    return successResponse(res, { data: { product: isProduct } });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
+const updateOrderProduct = async (req, res) => {
+  const { orderId, productId, ...rest } = req.body;
+  const vendorId = req.user._id;
+
+  const updatedProduct = {
+    quantity: rest?.quantity,
+    rate: rest?.rate,
+    price: rest?.price,
+  };
+
+  try {
+    const result = await Order.updateOne(
+      { _id: orderId, vendorId, "products._id": productId },
+      {
+        $set: {
+          "products.$.quantity": updatedProduct.quantity,
+          "products.$.rate": updatedProduct.rate,
+          "products.$.price": updatedProduct.price,
+          "products.$.status": updatedProduct.status,
+        },
+      }
+    );
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
+const allocateOrderProducts = async (req, res) => {
+  const { orderId, productItemId, quantity } = req.body;
+  const { _id: vendorId } = req.user;
+
+  try {
+    const order = await Order.findOne({ _id: orderId, vendorId });
+
+    if (!order) return errorResponse(res, { message: "Order not found!" });
+
+    const product = order.products.find(
+      (item) => item._id.toString() === productItemId
+    );
+
+    if (!product) {
+      return errorResponse(res, { message: "Product not found in the order!" });
+    }
+
+    if (product.quantity < quantity) {
+      return errorResponse(res, { message: "Insufficient product quantity!" });
+    }
+
+    if (product.quantity === quantity) {
+      // Update the status directly
+      await Order.findOneAndUpdate(
+        { _id: orderId, "products._id": productItemId, vendorId },
+        {
+          $set: {
+            "products.$.status": "allocated",
+          },
+        }
+      );
+    } else {
+      // Update the original product's quantity
+      await Order.findOneAndUpdate(
+        { _id: orderId, "products._id": productItemId, vendorId },
+        {
+          $inc: {
+            "products.$.quantity": -quantity,
+          },
+        }
+      );
+
+      // Add a new product clone with the allocated quantity
+      await Order.findOneAndUpdate(
+        { _id: orderId, vendorId },
+        {
+          $push: {
+            products: {
+              product: product.product,
+              quantity: quantity,
+              rate: product.rate,
+              price: product.price,
+              status: "allocated",
+            },
+          },
+        }
+      );
+    }
+
+    return successResponse(res, { message: "Product allocated successfully!" });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
 module.exports = {
   getOrder,
   createOrder,
   getAllOrders,
+  getOrderProduct,
   addProductInOrder,
   deleteCustomerOrder,
+  allocateOrderProducts,
   deleteProductFromOrder,
 };

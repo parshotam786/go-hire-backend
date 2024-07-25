@@ -181,7 +181,7 @@ const getOrderProduct = async (req, res) => {
   const { _id: vendorId } = req.user;
 
   try {
-    const isOrder = await Order.findOne({ _id: order_Id, vendorId });
+    const isOrder = await Order.findOne({ orderId: order_Id, vendorId })?.populate('products.product');
 
     if (!isOrder) return errorResponse(res, { message: "product not found!" });
 
@@ -210,7 +210,7 @@ const updateOrderProduct = async (req, res) => {
 
   try {
     const updateResult = await Order.updateOne(
-      { _id: orderId, vendorId, "products._id": itemId },
+      { orderId: orderId, vendorId, "products._id": itemId },
       {
         $set: {
           "products.$.quantity": updatedProduct.quantity,
@@ -234,7 +234,7 @@ const updateOrderProduct = async (req, res) => {
     }
 
     const updatedOrder = await Order.findOne(
-      { _id: orderId, vendorId, "products._id": itemId },
+      { orderId: orderId, vendorId, "products._id": itemId },
       { "products.$": 1 }
     );
 

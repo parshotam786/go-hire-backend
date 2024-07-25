@@ -19,7 +19,7 @@ router.get("/:id", getOrder);
 router.post("/create-order", createOrder);
 router.patch(
   "/update-products",
-  // allowedRoles(['Vendor']),
+  allowedRoles(['Seller']),
   addProductInOrder
 );
 

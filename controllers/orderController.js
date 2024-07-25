@@ -11,7 +11,6 @@ const generateAlphanumericId = (length = 8) => {
 };
 const getOrder = async (req, res) => {
   // const findOrder = await Order.find({ orderId: req.params?.id })
-  console.log("re", req.params);
   const findOrder = await Order.findById(req.params?.id).populate(
     "products.product"
   );
@@ -286,7 +285,7 @@ const allocateOrderProducts = async (req, res) => {
       return errorResponse(res, { message: "Insufficient product quantity!" });
     }
 
-    if (product.quantity === quantity) {
+    if (product.quantity == quantity) {
       // Update the status directly
       await Order.findOneAndUpdate(
         { _id: orderId, "products._id": productItemId, vendorId },

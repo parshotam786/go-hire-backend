@@ -324,7 +324,10 @@ const allocateOrderProducts = async (req, res) => {
       );
     }
 
-    const updatedOrder = await Order.findOne({ _id: orderId, vendorId });
+    const updatedOrder = await Order.findOne({
+      _id: orderId,
+      vendorId,
+    }).populate("products.product");
 
     return successResponse(res, {
       message: "Product allocated successfully!",

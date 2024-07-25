@@ -13,8 +13,11 @@ exports.addProduct = async (req, res) => {
       rentDuration,
       salePrice,
       availability,
-      minStock,
-      maxStock,
+      rate,
+      quantity,
+      range,
+      minHireTime,
+      vat,
       subCategory,
       vendorId,
     } = req.body;
@@ -31,12 +34,14 @@ exports.addProduct = async (req, res) => {
       rentDuration,
       subCategory,
       salePrice,
-      minStock,
-      maxStock,
+      quantity,
+      range,
+      minHireTime,
+      vat,
+      rate,
       vendorId,
       images,
     });
-
     await product.save();
     res.status(201).json({ message: "Product added successfully", product });
   } catch (error) {
@@ -61,8 +66,11 @@ exports.updateProduct = async (req, res) => {
       rentDuration,
       salePrice,
       availability,
-      minStock,
-      maxStock,
+      quantity,
+      range,
+      minHireTime,
+      vat,
+      rate,
       subCategory,
       vendorId,
     } = req.body;
@@ -83,8 +91,11 @@ exports.updateProduct = async (req, res) => {
       rentDuration,
       salePrice,
       availability,
-      minStock,
-      maxStock,
+      quantity,
+      range,
+      minHireTime,
+      vat,
+      rate,
       subCategory,
       vendorId,
       images,
@@ -152,9 +163,11 @@ exports.getProductsByVendorId = async (req, res) => {
       return res.status(400).json({ error: "Vendor ID is required" });
     }
 
-    const products = await Product.find({ vendorId }).sort({
-      createdAt: -1,
-    });
+    const products = await Product.find({ vendorId })
+      .sort({
+        createdAt: -1,
+      })
+      .populate(["category", "subCategory"]);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,
@@ -167,8 +180,11 @@ exports.getProductsByVendorId = async (req, res) => {
       rentPrice: product.rentPrice,
       rentDuration: product.rentDuration,
       salePrice: product.salePrice,
-      minStock: product.minStock,
-      maxStock: product.maxStock,
+      quantity: product.quantity,
+      range: product.range,
+      minHireTime: product.minHireTime,
+      vat: product.vat,
+      rate: product.rate,
       vendorId: product.vendorId,
       thumbnail: product.images[0],
       isActive: product.isActive,
@@ -225,16 +241,77 @@ exports.removeProduct = async (req, res) => {
 exports.getProudctById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findById(id).select("-__v");
+    const product = await Product.findById(id)
+      .select("-__v")
+      .populate(["category", "subCategory"]);
 
     if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+      return res
+        .status(404)
+        .json({ message: "Product not found", success: false });
     }
 
-    res.status(200).json({ product });
+    res.status(200).json({ product, success: true });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+};
+
+exports.getProductsBySearch = async (req, res) => {
+  try {
+    const { vendorId, search } = req.query;
+
+    if (!vendorId) {
+      return res.status(400).json({ error: "Vendor ID is required" });
+    }
+
+    // Construct the query object
+    let query = { vendorId };
+
+    if (search) {
+      query.$or = [
+        { status: { $regex: search, $options: "i" } },
+        { productName: { $regex: search, $options: "i" } },
+        { companyProductName: { $regex: search, $options: "i" } },
+      ];
+    }
+    const totalCount = await Product.countDocuments(query);
+    const products = await Product.find(query)
+      .sort({
+        createdAt: -1,
+      })
+      .populate(["category", "subCategory"]);
+
+    const transformedProducts = products.map((product) => ({
+      id: product._id,
+      companyProductName: product.companyProductName,
+      productDescription: product.productDescription,
+      productName: product.productName,
+      category: product.category,
+      sub_category: product.subCategory,
+      status: product.status,
+      rentPrice: product.rentPrice,
+      rentDuration: product.rentDuration,
+      salePrice: product.salePrice,
+      quantity: product.quantity,
+      range: product.range,
+      minHireTime: product.minHireTime,
+      vat: product.vat,
+      rate: product.rate,
+      vendorId: product.vendorId,
+      thumbnail: product.images[0],
+      isActive: product.isActive,
+      title: product.productName,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: transformedProducts,
+      count: totalCount,
+    });
   } catch (error) {
     res
       .status(500)
-      .json({ error: "Error retrieving product", details: error.message });
+      .json({ error: "Error fetching products", details: error.message });
   }
 };

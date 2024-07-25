@@ -1,8 +1,11 @@
 const Admin = require("../models/adminModel");
 const Vender = require("../models/venderModel");
+const Customer = require("../models/customers");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const upload = require("../utiles/multerConfig");
+const Order = require("../models/orderModel");
+const Product = require("../models/productModel");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -37,7 +40,7 @@ const AdminLogin = async (req, res) => {
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       "your_jwt_secret",
-      { expiresIn: "1h" }
+      { expiresIn: "30d" }
     );
     res.send({
       message: "Login successful",
@@ -131,7 +134,7 @@ const VenderLogin = async (req, res) => {
     const token = jwt.sign(
       { _id: vender._id, role: vender.role },
       "your_jwt_secret",
-      { expiresIn: "1h" }
+      { expiresIn: "30d" }
     );
     res.send({
       message: "Login successful",
@@ -235,6 +238,7 @@ const UserProfile = async (req, res) => {
 };
 
 const updateProfilePicture = (req, res) => {
+  console.log("text");
   upload(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: err });
@@ -363,22 +367,54 @@ const removeVenderAccount = async (req, res) => {
       return res.status(400).json({ message: "Vendor ID is required" });
     }
 
-    const Vendor = await Vender.findByIdAndDelete(id);
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
 
-    if (!Vendor) {
-      return res.status(404).json({ message: "Vendor not found" });
+    try {
+      const Vendor = await Vender.findById(id);
+
+      if (!Vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      await Promise.all([
+        Customer.deleteMany(
+          { vendorId: id }
+          //  { session }
+        ),
+        Order.deleteMany(
+          { vendorId: id }
+          // { session }
+        ),
+        Product.deleteMany(
+          { vendorId: id }
+          // { session }
+        ),
+        Vender.findByIdAndDelete(
+          id
+          // { session }
+        ),
+      ]);
+
+      // await session.commitTransaction();
+      return res.status(200).json({
+        success: true,
+        message: "Vendor Account Deleted successfully",
+      });
+    } catch (error) {
+      // await session.abortTransaction();
+      console.error("Error removing Vendor:", error);
+      return res
+        .status(500)
+        .json({ error: "Error removing Vendor", details: error.message });
+    } finally {
+      // session.endSession();
     }
-
-    res.status(200).json({
-      success: true,
-      message: "Vendor Account Deleted successfully",
-    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error removing Vendor", details: error.message });
+    res.status(500).json({ error: "Unexpected error", details: error.message });
   }
 };
+
 module.exports = {
   AdminLogin,
   AdminRegister,

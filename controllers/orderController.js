@@ -257,6 +257,18 @@ const allocateOrderProducts = async (req, res) => {
   const { orderId, productItemId, quantity } = req.body;
   const { _id: vendorId } = req.user;
 
+  const validation = {
+    orderId: orderId,
+    quantity: quantity,
+    productItemId: productItemId,
+  };
+
+  for (let key in validation) {
+    if (!validation[key]) {
+      return errorResponse(res, { message: `${key} is missing` });
+    }
+  }
+
   try {
     const order = await Order.findOne({ _id: orderId, vendorId });
 
@@ -312,7 +324,12 @@ const allocateOrderProducts = async (req, res) => {
       );
     }
 
-    return successResponse(res, { message: "Product allocated successfully!" });
+    const updatedOrder = await Order.findOne({ _id: orderId, vendorId });
+
+    return successResponse(res, {
+      message: "Product allocated successfully!",
+      data: updatedOrder,
+    });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });
   }

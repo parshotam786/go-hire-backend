@@ -318,6 +318,7 @@ const allocateOrderProducts = async (req, res) => {
   }
 };
 
+//exports
 module.exports = {
   getOrder,
   createOrder,

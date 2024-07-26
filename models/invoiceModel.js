@@ -15,7 +15,12 @@ const InvoiceSchema = new mongoose.Schema(
         rentPrice: { type: Number },
         subCategory: { type: String },
         salePrice: { type: Number },
-        vendorId: { type: String, required: true },
+        vendorId: {
+          type: mongoose.Schema.Types.ObjectId,
+          default: null,
+          required: true,
+          ref: "Vender",
+        },
         isActive: { type: String, default: "Active" },
       },
     ],

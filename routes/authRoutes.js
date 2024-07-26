@@ -14,6 +14,7 @@ const {
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,
+  getVendorDashboardStats,
 } = require("../controllers/authController");
 const {
   invoiceAddData,
@@ -27,6 +28,8 @@ const {
   getProductsByVendorId,
   removeProduct,
 } = require("../controllers/productController");
+const allowedRoles = require("../utiles/allowRoles");
+const { authenticateUser } = require("../utiles/userAccessMiddleware");
 // const path = require("path");
 
 // const storage = multer.diskStorage({
@@ -70,6 +73,13 @@ router.post("/vender/invoice", invoiceAddData);
 router.get("/vender/invoice/list/:id", GetInvoiceListById);
 router.get("/vender/invoice/list/view/:id", getInvoiceById);
 router.delete("/vender/invoice/list/view/:id", deleteInvoice);
+router.get(
+  "/vendor/stats",
+  authenticateUser,
+  require("./orderRoutes"),
+  allowedRoles(["Seller"]),
+  getVendorDashboardStats
+);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

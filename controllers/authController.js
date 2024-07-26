@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const upload = require("../utiles/multerConfig");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const { errorResponse, successResponse } = require("../utiles/responses");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -414,6 +415,76 @@ const removeVenderAccount = async (req, res) => {
   }
 };
 
+const getVendorDashboardStats = async (req, res) => {
+  const vendorId = req.user._id;
+
+  try {
+    const statsData = await Vender.aggregate([
+      { $match: { _id: vendorId } },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "vendorId",
+          as: "orders",
+        },
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "_id",
+          foreignField: "vendorId",
+          as: "customers",
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "vendorId",
+          as: "products",
+        },
+      },
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "vendorId",
+          as: "invoices",
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          ordersCount: { $size: "$orders" },
+          productsCount: { $size: "$products" },
+          customersCount: { $size: "$customers" },
+          invoicesCount: { $size: "$invoices" },
+        },
+      },
+      {
+        $addFields: {
+          statsData: [
+            { name: "Orders", count: "$ordersCount" },
+            { name: "Products", count: "$productsCount" },
+            { name: "Customers", count: "$customersCount" },
+            { name: "Invoices", count: "$invoicesCount" },
+          ],
+        },
+      },
+      {
+        $project: {
+          statsData: 1,
+        },
+      },
+    ]);
+
+    return successResponse(res, { data: statsData[0]?.statsData });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -428,4 +499,5 @@ module.exports = {
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,
+  getVendorDashboardStats,
 };

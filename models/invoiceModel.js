@@ -1,42 +1,59 @@
 const mongoose = require("mongoose");
 
+const counterSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  value: { type: Number, default: 0 },
+});
+
+const Counter = mongoose.model("Counter", counterSchema);
+
+const getNextSequenceValue = async (sequenceName) => {
+  const sequenceDocument = await Counter.findOneAndUpdate(
+    { name: sequenceName },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true } // Create the document if it doesn't exist
+  );
+
+  return sequenceDocument.value;
+};
+
 const InvoiceSchema = new mongoose.Schema(
   {
-    products: [
-      {
-        productName: { type: String, required: true },
-        companyProductName: { type: String },
-        productDescription: { type: String },
-        category: { type: String },
-        totalRentPrice: { type: Number },
-        start_date: { type: Date },
-        end_date: { type: Date },
-        status: { type: String },
-        rentPrice: { type: Number },
-        subCategory: { type: String },
-        salePrice: { type: Number },
-        vendorId: {
-          type: mongoose.Schema.Types.ObjectId,
-          default: null,
-          required: true,
-          ref: "Vender",
-        },
-        isActive: { type: String, default: "Active" },
-      },
-    ],
     invoiceDate: { type: String },
-    InvoiceNumber: { type: String },
-    //     billing
-    address: { type: String },
-    city: { type: String },
-    country: { type: String },
-    email: { type: String },
-    name: { type: String },
-    phone: { type: String },
-    zip: { type: String },
+    invoiceNumber: { type: String },
+    deliveryNumber: { type: String },
+    invoiceRefrence: { type: String },
+    bookDate: {
+      type: Date,
+      default: Date.now,
+    },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+    },
+    // customerId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Customers",
+    // },
   },
   { timestamps: true }
 );
+
+InvoiceSchema.pre("save", async function (next) {
+  if (!this.isNew) return next(); // Only for new documents
+
+  try {
+    const deliveryNumber = await getNextSequenceValue("deliveryNumber");
+    this.deliveryNumber = `DN${String(deliveryNumber).padStart(2, "0")}`;
+
+    const invoiceNumber = await getNextSequenceValue("invoiceNumber");
+    this.invoiceNumber = `INV-${String(invoiceNumber).padStart(5, "0")}`;
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 const Invoice = mongoose.model("Invoice", InvoiceSchema);
 

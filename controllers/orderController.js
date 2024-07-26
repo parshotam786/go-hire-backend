@@ -1,3 +1,5 @@
+const { default: mongoose } = require("mongoose");
+const Invoice = require("../models/invoiceModel");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
 
@@ -353,6 +355,160 @@ const allocateOrderProducts = async (req, res) => {
   }
 };
 
+const generateOrderInvoice = async (req, res) => {
+  const { orderId, productIds = [], reference, bookDate } = req.body;
+
+  const { _id: vendorId } = req.user;
+
+  const validation = {
+    orderId,
+    productIds,
+  };
+
+  if (!orderId) return errorResponse(res, { message: "orderId is missing" });
+
+  if (!productIds || productIds?.length === 0)
+    return errorResponse(res, {
+      message: !productIds ? "productIds is missing" : "productIds is empty!",
+    });
+
+  for (let key in validation) {
+    if (!validation[key]) {
+      return errorResponse(res, { message: `${key} is missing` });
+    }
+  }
+
+  try {
+    const objectProductIds = productIds.map(
+      (id) => new mongoose.Types.ObjectId(id)
+    );
+
+    // Update the status of the specified products to "onrent"
+    const order = await Order.findOneAndUpdate(
+      { orderId: orderId, vendorId },
+      { $set: { "products.$[elem].status": "onrent" } },
+      {
+        arrayFilters: [{ "elem._id": { $in: objectProductIds } }],
+        new: true,
+      }
+    );
+
+    let invoice = await Invoice.findOne({ orderId: order._id });
+
+    if (!invoice) {
+      invoice = new Invoice({
+        orderId: order._id,
+        customerId: order.customerId,
+        invoiceRefrence: reference,
+        bookDate: bookDate ?? new Date(),
+      });
+
+      await invoice.save();
+    }
+
+    const invoiceData = await Invoice.aggregate([
+      {
+        $match: { _id: invoice._id },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "orderDetails",
+        },
+      },
+      {
+        $unwind: "$orderDetails",
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "orderDetails.customerId",
+          foreignField: "_id",
+          as: "customerDetails",
+        },
+      },
+      // {
+      //   $unwind: "$orderDetails",
+      // },
+      {
+        $unwind: "$customerDetails",
+      },
+
+      {
+        $lookup: {
+          from: "products", // Collection name for Product schema
+          let: { productIds: "$orderDetails.products.product" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$productIds"],
+                },
+              },
+            },
+          ],
+          as: "productDetails",
+        },
+      },
+
+      {
+        $addFields: {
+          "orderDetails.products": {
+            $map: {
+              input: "$orderDetails.products",
+              as: "product",
+              in: {
+                $mergeObjects: [
+                  "$$product",
+                  {
+                    productDetails: {
+                      $arrayElemAt: [
+                        "$productDetails",
+                        {
+                          $indexOfArray: [
+                            "$productDetails._id",
+                            "$$product.product",
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      {
+        $addFields: {
+          "orderDetails.products": {
+            $filter: {
+              input: "$orderDetails.products",
+              as: "product",
+              cond: {
+                $and: [
+                  { $eq: ["$$product.status", "onrent"] },
+                  { $in: ["$$product._id", objectProductIds] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    return successResponse(res, {
+      data: invoiceData[0],
+      message: "invoice generated succesfully",
+    });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
 //exports
 module.exports = {
   getOrder,
@@ -364,4 +520,5 @@ module.exports = {
   deleteCustomerOrder,
   allocateOrderProducts,
   deleteProductFromOrder,
+  generateOrderInvoice,
 };

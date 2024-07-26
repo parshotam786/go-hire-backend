@@ -180,7 +180,10 @@ const getOrderProduct = async (req, res) => {
   const { _id: vendorId } = req.user;
 
   try {
-    const isOrder = await Order.findOne({ orderId: order_Id, vendorId })?.populate('products.product');
+    const isOrder = await Order.findOne({
+      orderId: order_Id,
+      vendorId,
+    })?.populate("products.product");
 
     if (!isOrder) return errorResponse(res, { message: "product not found!" });
 
@@ -281,46 +284,59 @@ const allocateOrderProducts = async (req, res) => {
       return errorResponse(res, { message: "Product not found in the order!" });
     }
 
-    if (product.quantity < quantity) {
-      return errorResponse(res, { message: "Insufficient product quantity!" });
-    }
-
-    if (product.quantity == quantity) {
-      // Update the status directly
+    if (product.status === "allocated") {
       await Order.findOneAndUpdate(
         { _id: orderId, "products._id": productItemId, vendorId },
         {
           $set: {
-            "products.$.status": "allocated",
+            "products.$.status": "reserved",
           },
         }
       );
     } else {
-      // Update the original product's quantity
-      await Order.findOneAndUpdate(
-        { _id: orderId, "products._id": productItemId, vendorId },
-        {
-          $inc: {
-            "products.$.quantity": -quantity,
-          },
-        }
-      );
+      if (product.quantity < quantity) {
+        return errorResponse(res, {
+          message: "Insufficient product quantity!",
+        });
+      }
 
-      // Add a new product clone with the allocated quantity
-      await Order.findOneAndUpdate(
-        { _id: orderId, vendorId },
-        {
-          $push: {
-            products: {
-              product: product.product,
-              quantity: quantity,
-              rate: product.rate,
-              price: product.price,
-              status: "allocated",
+      if (product.quantity == quantity) {
+        // Update the status directly
+        await Order.findOneAndUpdate(
+          { _id: orderId, "products._id": productItemId, vendorId },
+          {
+            $set: {
+              "products.$.status": "allocated",
             },
-          },
-        }
-      );
+          }
+        );
+      } else {
+        // Update the original product's quantity
+        await Order.findOneAndUpdate(
+          { _id: orderId, "products._id": productItemId, vendorId },
+          {
+            $inc: {
+              "products.$.quantity": -quantity,
+            },
+          }
+        );
+
+        // Add a new product clone with the allocated quantity
+        await Order.findOneAndUpdate(
+          { _id: orderId, vendorId },
+          {
+            $push: {
+              products: {
+                product: product.product,
+                quantity: quantity,
+                rate: product.rate,
+                price: product.price,
+                status: "allocated",
+              },
+            },
+          }
+        );
+      }
     }
 
     const updatedOrder = await Order.findOne({
@@ -329,7 +345,7 @@ const allocateOrderProducts = async (req, res) => {
     }).populate("products.product");
 
     return successResponse(res, {
-      message: "Product allocated successfully!",
+      message: "Product status changed successfully!",
       data: updatedOrder,
     });
   } catch (error) {

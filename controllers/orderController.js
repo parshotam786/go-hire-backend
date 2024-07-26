@@ -11,7 +11,6 @@ const generateAlphanumericId = (length = 8) => {
 };
 const getOrder = async (req, res) => {
   // const findOrder = await Order.find({ orderId: req.params?.id })
-  console.log("re", req.params);
   const findOrder = await Order.findById(req.params?.id).populate(
     "products.product"
   );
@@ -181,7 +180,7 @@ const getOrderProduct = async (req, res) => {
   const { _id: vendorId } = req.user;
 
   try {
-    const isOrder = await Order.findOne({ _id: order_Id, vendorId });
+    const isOrder = await Order.findOne({ orderId: order_Id, vendorId })?.populate('products.product');
 
     if (!isOrder) return errorResponse(res, { message: "product not found!" });
 
@@ -210,7 +209,7 @@ const updateOrderProduct = async (req, res) => {
 
   try {
     const updateResult = await Order.updateOne(
-      { _id: orderId, vendorId, "products._id": itemId },
+      { orderId: orderId, vendorId, "products._id": itemId },
       {
         $set: {
           "products.$.quantity": updatedProduct.quantity,
@@ -234,7 +233,7 @@ const updateOrderProduct = async (req, res) => {
     }
 
     const updatedOrder = await Order.findOne(
-      { _id: orderId, vendorId, "products._id": itemId },
+      { orderId: orderId, vendorId, "products._id": itemId },
       { "products.$": 1 }
     );
 
@@ -286,7 +285,7 @@ const allocateOrderProducts = async (req, res) => {
       return errorResponse(res, { message: "Insufficient product quantity!" });
     }
 
-    if (product.quantity === quantity) {
+    if (product.quantity == quantity) {
       // Update the status directly
       await Order.findOneAndUpdate(
         { _id: orderId, "products._id": productItemId, vendorId },
@@ -338,6 +337,7 @@ const allocateOrderProducts = async (req, res) => {
   }
 };
 
+//exports
 module.exports = {
   getOrder,
   createOrder,

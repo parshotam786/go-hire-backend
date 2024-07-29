@@ -405,7 +405,7 @@ const bookOrderInvoice = async (req, res) => {
       data: { invoiceNumber: invoice.invoiceNumber, productIds },
     });
   } catch (error) {
-    return errorResponse(res, { message: error?.message || "Server Error!" });
+    return errorResponse(res, { message: error?.message || "Server Error!!" });
   }
 };
 

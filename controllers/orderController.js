@@ -2,10 +2,17 @@ const { default: mongoose } = require("mongoose");
 const Invoice = require("../models/invoiceModel");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const Document = require("../models/documentNumber");
 
 const { errorResponse, successResponse } = require("../utiles/responses");
 
-const generateAlphanumericId = (length = 8) => {
+const generateAlphanumericId = async (vendorId) => {
+  const document = await Document.findOne({ name: "Order", vendorId });
+
+  const orderId = document.code + (document.seed + document.counter).toString();
+
+  return orderId;
+
   return Math.random()
     .toString(36)
     .substring(2, 2 + length)
@@ -35,7 +42,8 @@ const getAllOrders = async (req, res) => {
   return res.status(200).json({ data: findOrders });
 };
 const createOrder = async (req, res) => {
-  const { account, vendorId, customerId } = req.body;
+  const { account, customerId } = req.body;
+  const { _id: vendorId } = req.user;
 
   // const validation = {
   //     account, vendorId, customerId
@@ -46,7 +54,7 @@ const createOrder = async (req, res) => {
   //     }
   // }
 
-  req.body.orderId = generateAlphanumericId();
+  req.body.orderId = generateAlphanumericId(vendorId);
   const create = new Order(req.body);
   const created = await create.save();
   if (created) {

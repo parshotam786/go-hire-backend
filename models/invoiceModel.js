@@ -31,10 +31,10 @@ const InvoiceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
     },
-    // customerId: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "Customers",
-    // },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customers",
+    },
   },
   { timestamps: true }
 );

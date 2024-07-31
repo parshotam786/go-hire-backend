@@ -75,6 +75,7 @@ const getDocumentById = async (req, res) => {
       .json({ message: "Error retrieving document", error: error.message });
   }
 };
+
 const updateDocumentById = async (req, res) => {
   const { id } = req.params;
   const {
@@ -88,6 +89,17 @@ const updateDocumentById = async (req, res) => {
   } = req.body;
 
   try {
+    const existingDocument = await Documents.findById(id);
+    if (!existingDocument) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    if (parseInt(seed) <= parseInt(existingDocument.seed)) {
+      return res.status(400).json({
+        message: "invalid seed number!",
+      });
+    }
+
     const updatedDocument = await Documents.findByIdAndUpdate(
       id,
       {
@@ -98,13 +110,10 @@ const updateDocumentById = async (req, res) => {
         identityMinimumLength,
         domain,
         resetSeedFlag,
+        counter: resetSeedFlag ? 1 : existingDocument.counter,
       },
       { new: true } // This option returns the modified document rather than the original
     );
-
-    if (!updatedDocument) {
-      return res.status(404).json({ message: "Document not found" });
-    }
 
     res.status(200).json({
       updatedDocument,

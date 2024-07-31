@@ -1,5 +1,6 @@
 const multer = require("multer");
 const path = require("path");
+const XLSX = require('xlsx');
 const Customer = require("../models/customers");
 
 const storage = multer.diskStorage({
@@ -243,10 +244,108 @@ const getCustomerById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+const addCustomerByExcelSheet = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const excelFilePath = req.file.path;
+    const workbook = XLSX.readFile(excelFilePath);
+    const sheetName = workbook.SheetNames[0]; // Assuming data is in the first sheet
+    const worksheet = workbook.Sheets[sheetName];
+    const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+    const customers = [];
+
+    for (let data of excelData) {
+      const {
+        name,
+        number,
+        vendorId,
+        owner,
+        stop,
+        active,
+        cashCustomer,
+        canTakePayments,
+        addressLine1,
+        addressLine2,
+        city,
+        country,
+        postCode,
+        email,
+        fax,
+        telephone,
+        website,
+        type,
+        industry,
+        status,
+        taxClass,
+        parentAccount,
+        invoiceRunCode,
+        paymentTerm,
+        thumbnail, // Assuming thumbnail path is included in the sheet
+      } = data;
+
+      const thumbnailPath = thumbnail ? thumbnail : "images/default-image.png"; // Default image if not provided
+
+      const _findEmail = await Customer.findOne({ email })
+      if (_findEmail) {
+          return res.status(400).json({ success: false,  message: "Email already exist" })
+      }
+
+      const customer = new Customer({
+        name,
+        number,
+        vendorId,
+        owner,
+        stop,
+        active,
+        cashCustomer,
+        canTakePayments,
+        addressLine1,
+        addressLine2,
+        city,
+        country,
+        postCode,
+        email,
+        fax,
+        telephone,
+        website,
+        type,
+        industry,
+        status,
+        taxClass,
+        parentAccount,
+        invoiceRunCode,
+        paymentTerm,
+        thumbnail: thumbnailPath,
+      });
+
+      customers.push(customer);
+    }
+
+    // Save all customers to the database
+    await Customer.insertMany(customers);
+
+    res.status(201).json({
+      message: "Customers created successfully",
+      success: true,
+      count: customers.length,
+      customers,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   addCustomer: [upload.single("thumbnail"), addCustomer],
   getCustomer,
   updateCustomer: [upload.single("thumbnail"), updateCustomer],
   deleteCustomer,
   getCustomerById,
+  addCustomerByExcelSheet: [upload.single("excelFile"), addCustomerByExcelSheet]
 };

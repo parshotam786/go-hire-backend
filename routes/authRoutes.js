@@ -24,6 +24,7 @@ const {
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,
+  getImportData,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware")
 const {
@@ -91,6 +92,8 @@ router.post("/vender/invoice", invoiceAddData);
 router.get("/vender/invoice/list/:id", GetInvoiceListById);
 router.get("/vender/invoice/list/view/:id", getInvoiceById);
 router.delete("/vender/invoice/list/view/:id", deleteInvoice);
+
+router.get("/importdata", getImportData);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

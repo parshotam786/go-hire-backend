@@ -4,6 +4,7 @@ const {
   updateCustomer,
   deleteCustomer,
   getCustomerById,
+  addCustomerByExcelSheet,
 } = require("../controllers/customersController");
 
 const router = require("express").Router();
@@ -14,4 +15,5 @@ router.get("/customer/:id", getCustomerById);
 router.put("/customer/:id", updateCustomer);
 router.delete("/customer/:id", deleteCustomer);
 
+router.post("/exportdata/customer", addCustomerByExcelSheet);
 module.exports = router;

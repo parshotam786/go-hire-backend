@@ -7,6 +7,10 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const nodemailer = require('nodemailer')
 const upload = require("../utiles/multerConfig");
+// const fs = require("fs");
+const fs = require('fs').promises;
+const path = require("path");
+const XLSX = require('xlsx');
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -730,6 +734,61 @@ const removeVenderAccount = async (req, res) => {
       .json({ error: "Error removing Vendor", details: error.message });
   }
 };
+
+const getImportData = async (req, res) => {
+  try {
+    const { entity_name } = req.query;
+    if (!entity_name) {
+      return res.status(400).json({ success: false, error: 'Entity is required' });
+    }
+
+    let filePath;
+    switch (entity_name.toLowerCase()) {
+      case 'customer':
+        filePath = path.join(__dirname, 'files', 'customer.csv');
+        break;
+      case 'contact':
+        filePath = path.join(__dirname, 'files', 'contact.csv');
+        break;
+      case 'place':
+        filePath = path.join(__dirname, 'files', 'place.csv');
+        break;
+      case 'product':
+        filePath = path.join(__dirname, 'files', 'product.csv');
+        break;
+      case 'productaccessory':
+        filePath = path.join(__dirname, 'files', 'productaccessory.csv');
+        break;
+      case 'productgroup':
+        filePath = path.join(__dirname, 'files', 'productgroup.csv');
+        break;
+      case 'productrate':
+        filePath = path.join(__dirname, 'files', 'productrate.csv');
+        break;
+      case 'service':
+        filePath = path.join(__dirname, 'files', 'service.csv');
+        break;
+      case 'servicerate':
+        filePath = path.join(__dirname, 'files', 'servicerate.csv');
+        break;
+      case 'productstocklevel':
+        filePath = path.join(__dirname, 'files', 'productstocklevel.csv');
+        break;
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid entity_name' });
+    }
+
+    // Read the file contents
+    const fileContent = await fs.readFile(filePath, { encoding: 'utf8' });
+
+    // Send the file content as JSON response
+    res.status(200).json({ success: true, data: fileContent });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -754,4 +813,5 @@ module.exports = {
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,
+  getImportData
 };

@@ -1,0 +1,3 @@
+Id,name,thumbnail,number,owner,stop,active,cashCustomer,canTakePayments,addressLine1,addressLine2,city,country,postCode,email,fax,telephone,website,type,industry,status,taxClass,parentAccount,invoiceRunCode,paymentTerm,VendorId
+,khalil,,12345678,faraz,,yes,yes,no,address 1,address 2,karachi,pk,24900,khalil@mailinator.com,,123456,abc.com,,software,married,filer,yes,2424,cash,112233
+,parshotum,,12345678,faraz,,yes,yes,no,address 1,address 2,karachi,pk,24900,parsh@mailinator.com,,12456,abc.com,,software,single,filer,yes,2424,cash,112233

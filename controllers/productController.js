@@ -1,5 +1,6 @@
 const Product = require("../models/productModel");
 const Category = require("../models/categoriesModal");
+const XLSX = require('xlsx');
 
 // Add Product Api
 exports.addProduct = async (req, res) => {
@@ -401,3 +402,72 @@ exports.getStockView = async (req, res) => {
     return res.status(500).json({ error: error.message })
   }
 }
+
+exports.addProductsByExcel = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const excelFilePath = req.file.path;
+    const workbook = XLSX.readFile(excelFilePath);
+    const sheetName = workbook.SheetNames[0]; // Assuming data is in the first sheet
+    const worksheet = workbook.Sheets[sheetName];
+    const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+    const products = [];
+
+    for (let data of excelData) {
+      const {
+        productName,
+        companyProductName,
+        productDescription,
+        category,
+        status,
+        rentPrice,
+        rentDuration,
+        salePrice,
+        quantity,
+        minHireTime,
+        vat,
+        subCategory,
+        vendorId,
+        thumbnail, // Assuming thumbnail path is included in the sheet
+      } = data;
+
+      // Process thumbnail path to get absolute path if needed
+      const thumbnailPath = thumbnail ? thumbnail : "images/default-thumbnail.jpg"; // Default image if not provided
+
+      const product = new Product({
+        productName,
+        companyProductName,
+        productDescription,
+        category, // Assuming category and subCategory are ObjectId references
+        status,
+        rentPrice,
+        rentDuration,
+        salePrice,
+        quantity,
+        minHireTime,
+        vat,
+        subCategory,
+        vendorId,
+        images: [thumbnailPath], // Store image path in an array
+      });
+
+      products.push(product);
+    }
+
+    // Save all products to the database
+    await Product.insertMany(products);
+
+    res.status(201).json({
+      message: "Products added successfully",
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error adding products", error: error.message });
+  }
+};

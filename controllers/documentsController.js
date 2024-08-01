@@ -97,6 +97,7 @@ const updateDocumentById = async (req, res) => {
     if (parseInt(seed) <= parseInt(existingDocument.seed)) {
       return res.status(400).json({
         message: "invalid seed number!",
+        success: false,
       });
     }
 
@@ -106,11 +107,11 @@ const updateDocumentById = async (req, res) => {
         name,
         code,
         mask,
-        seed,
+        ...(resetSeedFlag ? { seed } : {}),
         identityMinimumLength,
         domain,
         resetSeedFlag,
-        counter: resetSeedFlag ? 1 : existingDocument.counter,
+        counter: resetSeedFlag ? 0 : existingDocument.counter,
       },
       { new: true } // This option returns the modified document rather than the original
     );

@@ -42,7 +42,7 @@ const Documents = new mongoose.Schema(
     },
     counter: {
       type: Number,
-      default: 1,
+      default: 0,
     },
   },
   {

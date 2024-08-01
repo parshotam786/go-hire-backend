@@ -45,18 +45,16 @@ const createOrder = async (req, res) => {
   const { account, customerId } = req.body;
   const { _id: vendorId } = req.user;
 
-  // const validation = {
-  //     account, vendorId, customerId
-  // }
-  // for (let key in validation) {
-  //     if (validation[key]) {
-  //         return res.status(400).json({ error: `${key} is missing` })
-  //     }
-  // }
-
-  req.body.orderId = generateAlphanumericId(vendorId);
+  req.body.orderId = await generateAlphanumericId(vendorId);
   const create = new Order(req.body);
   const created = await create.save();
+
+  await Document.findOneAndUpdate(
+    { name: "Order" },
+    { $inc: { counter: 1 } },
+    { new: true }
+  );
+
   if (created) {
     return res.status(200).json({
       data: created,

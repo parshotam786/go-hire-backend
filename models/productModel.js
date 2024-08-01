@@ -27,6 +27,12 @@ const productSchema = new mongoose.Schema(
     range: { type: String },
     vat: { type: String },
     rate: { type: String },
+    lenghtUnit: { type: String },
+    weightUnit: { type: String },
+    weight: { type: Number },
+    length: { type: Number },
+    width: { type: Number },
+    height: { type: Number },
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

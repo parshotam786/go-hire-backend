@@ -266,7 +266,7 @@ const updateOrderProduct = async (req, res) => {
 };
 
 const allocateOrderProducts = async (req, res) => {
-  const { orderId, productItemId, quantity } = req.body;
+  const { orderId, productItemId, quantity, revert } = req.body;
   const { _id: vendorId } = req.user;
 
   const validation = {
@@ -294,15 +294,26 @@ const allocateOrderProducts = async (req, res) => {
       return errorResponse(res, { message: "Product not found in the order!" });
     }
 
-    if (product.status === "allocated") {
-      await Order.findOneAndUpdate(
-        { _id: orderId, "products._id": productItemId, vendorId },
-        {
-          $set: {
-            "products.$.status": "reserved",
-          },
-        }
-      );
+    if (revert) {
+      if (product.status === "allocated") {
+        await Order.findOneAndUpdate(
+          { _id: orderId, "products._id": productItemId, vendorId },
+          {
+            $set: {
+              "products.$.status": "reserved",
+            },
+          }
+        );
+      } else if (product.status === "onrent") {
+        await Order.findOneAndUpdate(
+          { _id: orderId, "products._id": productItemId, vendorId },
+          {
+            $set: {
+              "products.$.status": "allocated",
+            },
+          }
+        );
+      }
     } else {
       if (product.quantity < quantity) {
         return errorResponse(res, {
@@ -311,7 +322,6 @@ const allocateOrderProducts = async (req, res) => {
       }
 
       if (product.quantity == quantity) {
-        // Update the status directly
         await Order.findOneAndUpdate(
           { _id: orderId, "products._id": productItemId, vendorId },
           {
@@ -321,7 +331,6 @@ const allocateOrderProducts = async (req, res) => {
           }
         );
       } else {
-        // Update the original product's quantity
         await Order.findOneAndUpdate(
           { _id: orderId, "products._id": productItemId, vendorId },
           {
@@ -331,7 +340,6 @@ const allocateOrderProducts = async (req, res) => {
           }
         );
 
-        // Add a new product clone with the allocated quantity
         await Order.findOneAndUpdate(
           { _id: orderId, vendorId },
           {

@@ -375,20 +375,6 @@ const updateProfilePicture = (req, res) => {
   });
 };
 
-const getProfilePicture = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await Vender.findById(id).select("profile_Picture");
-
-    if (!user) {
-      return res.status(404).json({ error: "Profile picture not found" });
-    }
-
-    res.status(200).json({ user });
-  } catch (error) {
-    res.status(500).json({ error: "", details: error.message });
-  }
-};
 // brand logo
 const updateBrandLogo = (req, res) => {
   uploadLogo(req, res, async (err) => {
@@ -426,21 +412,6 @@ const updateBrandLogo = (req, res) => {
       res.status(500).json({ success: false, message: "Server Error" });
     }
   });
-};
-
-const getBrandLogo = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await Vender.findById(id).select("brandLogo");
-
-    if (!user) {
-      return res.status(404).json({ error: "Profile picture not found" });
-    }
-
-    res.status(200).json({ user });
-  } catch (error) {
-    res.status(500).json({ error: "", details: error.message });
-  }
 };
 
 const updateUserdata = async (req, res) => {
@@ -647,9 +618,7 @@ module.exports = {
   VenderDirectory,
   UserProfile,
   updateProfilePicture,
-  getProfilePicture,
   updateBrandLogo,
-  getBrandLogo,
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,

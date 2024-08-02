@@ -96,7 +96,7 @@ const VenderSchema = new mongoose.Schema(
     },
     brandLogo: {
       type: String,
-      default: null,
+      default: "images/dummylogo.png",
     },
     role: {
       type: String,

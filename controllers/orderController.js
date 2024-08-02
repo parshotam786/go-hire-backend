@@ -10,7 +10,7 @@ const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
 
   const uniqueId =
-    document.code + (document.seed + document.counter).toString();
+    document.code + "-" + (document.seed + document.counter).toString();
 
   return uniqueId;
 };
@@ -42,7 +42,7 @@ const createOrder = async (req, res) => {
   const { account, customerId } = req.body;
   const { _id: vendorId } = req.user;
 
-  req.body.orderId = await generateAlphanumericId(vendorId, "Orderr");
+  req.body.orderId = await generateAlphanumericId(vendorId, "Order");
   const create = new Order(req.body);
   const created = await create.save();
 

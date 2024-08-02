@@ -517,7 +517,9 @@ const generateOrderInvoice = async (req, res) => {
               cond: {
                 $and: [
                   { $eq: ["$$product.status", "onrent"] },
-                  { $in: ["$$product._id", objectProductIds] },
+                  ...(productIds.length > 0
+                    ? [{ $in: ["$$product._id", objectProductIds] }]
+                    : []),
                 ],
               },
             },

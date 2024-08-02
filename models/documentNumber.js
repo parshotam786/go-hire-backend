@@ -12,8 +12,17 @@ const Documents = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      enum: ["Order", "Batch Number"],
-      unique: true,
+      enum: [
+        "Order",
+        "Batch Number",
+        "Invoice",
+        "Credit Note",
+        "Delivery Note",
+        "Picking List",
+        "Purchase Order",
+        "Return Note",
+        "Works Order",
+      ],
     },
     code: {
       type: String,

@@ -6,7 +6,9 @@ const bcrypt = require("bcryptjs");
 const upload = require("../utiles/multerConfig");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const Documents = require("../models/documentNumber");
 const { errorResponse, successResponse } = require("../utiles/responses");
+const { default: mongoose } = require("mongoose");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -111,7 +113,104 @@ const VenderRegister = async (req, res) => {
       name,
       password: hashedPassword,
     });
-    await newVender.save();
+
+    const vendor = await newVender.save();
+    console.log(vendor);
+    const vendorId = new mongoose.Types.ObjectId(vendor._id);
+
+    const documents = [
+      {
+        vendorId: vendorId,
+        name: "Order",
+        code: "Ord",
+        mask: "Depot",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "Depot",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Invoice",
+        code: "INV",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Batch Number",
+        code: "BN",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Credit Note",
+        code: "CN",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Delivery Note",
+        code: "DN",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Picking List",
+        code: "PL",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Purchase Order",
+        code: "PO",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Return Note",
+        code: "RN",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+      {
+        vendorId: vendorId,
+        name: "Works Order",
+        code: "WO",
+        mask: "country",
+        seed: 1,
+        identityMinimumLength: 2,
+        domain: "country",
+        resetSeedFlag: false,
+      },
+    ];
+    await Documents.insertMany(documents);
     res
       .status(201)
       .send({ success: true, message: "Vender registered successfully" });

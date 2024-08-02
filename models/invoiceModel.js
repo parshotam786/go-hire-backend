@@ -35,6 +35,10 @@ const InvoiceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Customers",
     },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vender",
+    },
   },
   { timestamps: true }
 );

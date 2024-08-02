@@ -388,7 +388,7 @@ const bookOrderInvoice = async (req, res) => {
 
     // Update the status of the specified products to "onrent"
     const order = await Order.findOneAndUpdate(
-      { orderId: orderId, vendorId },
+      { _id: orderId, vendorId },
       { $set: { "products.$[elem].status": "onrent" } },
       {
         arrayFilters: [{ "elem._id": { $in: objectProductIds } }],
@@ -400,6 +400,7 @@ const bookOrderInvoice = async (req, res) => {
 
     if (!invoice) {
       invoice = new Invoice({
+        vendorId,
         orderId: order._id,
         customerId: order.customerId,
         invoiceRefrence: reference,
@@ -410,13 +411,13 @@ const bookOrderInvoice = async (req, res) => {
 
       return successResponse(res, {
         message: "invoice generated succesfully",
-        data: results.invoiceNumber,
+        data: { invoiceId: results._id, productIds },
       });
     }
 
     return successResponse(res, {
       message: "invoice generated succesfully",
-      data: { invoiceNumber: invoice.invoiceNumber, productIds },
+      data: { invoiceId: invoice._id, productIds },
     });
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!!" });
@@ -424,46 +425,16 @@ const bookOrderInvoice = async (req, res) => {
 };
 
 const generateOrderInvoice = async (req, res) => {
-  const { invoiceNumber, productIds = [] } = req.body;
-
-  // const { _id: vendorId } = req.user;
-
-  // const validation = {
-  //   orderId,
-  //   productIds,
-  // };
-
-  // if (!orderId) return errorResponse(res, { message: "orderId is missing" });
-
-  // if (!productIds || productIds?.length === 0)
-  //   return errorResponse(res, {
-  //     message: !productIds ? "productIds is missing" : "productIds is empty!",
-  //   });
-
-  // for (let key in validation) {
-  //   if (!validation[key]) {
-  //     return errorResponse(res, { message: `${key} is missing` });
-  //   }
-  // }
+  const { invoiceId, productIds = [] } = req.body;
 
   try {
     const objectProductIds = productIds.map(
       (id) => new mongoose.Types.ObjectId(id)
     );
 
-    // // Update the status of the specified products to "onrent"
-    // const order = await Order.findOneAndUpdate(
-    //   { orderId: orderId, vendorId },
-    //   { $set: { "products.$[elem].status": "onrent" } },
-    //   {
-    //     arrayFilters: [{ "elem._id": { $in: objectProductIds } }],
-    //     new: true,
-    //   }
-    // );
-
     const invoiceData = await Invoice.aggregate([
       {
-        $match: { invoiceNumber: invoiceNumber },
+        $match: { _id: new mongoose.Types.ObjectId(invoiceId) },
       },
       {
         $lookup: {

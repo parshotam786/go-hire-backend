@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const Invoice = require("../models/invoiceModel");
 const Vender = require("../models/venderModel");
 const formatDate = require("../utiles/formatDate");
@@ -75,7 +76,7 @@ exports.GetInvoiceListById = async (req, res) => {
     const { page = 1, limit = 10, search } = req.query;
 
     // Build the query object
-    const query = { "products.vendorId": id };
+    const query = { vendorId: new mongoose.Types.ObjectId(id) };
 
     if (search) {
       const searchRegex = new RegExp(search, "i"); // Case-insensitive search
@@ -89,7 +90,9 @@ exports.GetInvoiceListById = async (req, res) => {
 
     // Calculate pagination parameters
     const skip = (page - 1) * limit;
-    const invoices = await Invoice.find(query).skip(skip).limit(Number(limit));
+    const invoices = await Invoice.find({
+      vendorId: new mongoose.Types.ObjectId(id),
+    });
 
     if (!invoices || invoices.length === 0) {
       return res.status(404).json({

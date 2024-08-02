@@ -92,7 +92,7 @@ const VenderSchema = new mongoose.Schema(
     },
     profile_Picture: {
       type: String,
-      default: null,
+      default: "images/default-avatar.jpg",
     },
     brandLogo: {
       type: String,

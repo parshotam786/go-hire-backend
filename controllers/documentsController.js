@@ -14,9 +14,9 @@ const createDocument = async (req, res) => {
 
   const { _id: vendorId } = req.user;
   console.log(vendorId);
-  const namess = await Documents.findOne({ name });
+  const namess = await Documents.findOne({ name, vendorId });
   if (namess) {
-    res.status(400).json({ message: "Name already exist" });
+    return res.status(400).json({ message: "Name already exist" });
   }
 
   try {

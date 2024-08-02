@@ -94,6 +94,10 @@ const VenderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    brandLogo: {
+      type: String,
+      default: null,
+    },
     role: {
       type: String,
       default: "Seller",

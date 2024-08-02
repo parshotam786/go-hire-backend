@@ -16,7 +16,16 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb);
   },
-}).single("profile_Picture"); // 'profile_Picture' is the field name for the file
+}).single("profile_Picture");
+
+const uploadLogo = multer({
+  storage: storage,
+  limits: { fileSize: 8000000 }, // Limit file size to 1MB
+  fileFilter: (req, file, cb) => {
+    checkFileType(file, cb);
+  },
+}).single("brandLogo");
+
 // Check file type
 function checkFileType(file, cb) {
   const filetypes = /jpeg|jpg|png|gif/;
@@ -28,4 +37,4 @@ function checkFileType(file, cb) {
     cb("Error: Images Only!");
   }
 }
-module.exports = upload;
+module.exports = { upload, uploadLogo };

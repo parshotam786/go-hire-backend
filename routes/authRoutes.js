@@ -82,6 +82,7 @@ router.get(
   allowedRoles(["Seller"]),
   getVendorDashboardStats
 );
+
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

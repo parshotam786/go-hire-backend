@@ -6,18 +6,15 @@ const Document = require("../models/documentNumber");
 
 const { errorResponse, successResponse } = require("../utiles/responses");
 
-const generateAlphanumericId = async (vendorId) => {
-  const document = await Document.findOne({ name: "Order", vendorId });
+const generateAlphanumericId = async (vendorId, type = "Order") => {
+  const document = await Document.findOne({ name: type, vendorId });
 
-  const orderId = document.code + (document.seed + document.counter).toString();
+  const uniqueId =
+    document.code + (document.seed + document.counter).toString();
 
-  return orderId;
-
-  return Math.random()
-    .toString(36)
-    .substring(2, 2 + length)
-    .toUpperCase();
+  return uniqueId;
 };
+
 const getOrder = async (req, res) => {
   // const findOrder = await Order.find({ orderId: req.params?.id })
   const findOrder = await Order.findById(req.params?.id).populate(
@@ -45,7 +42,7 @@ const createOrder = async (req, res) => {
   const { account, customerId } = req.body;
   const { _id: vendorId } = req.user;
 
-  req.body.orderId = await generateAlphanumericId(vendorId);
+  req.body.orderId = await generateAlphanumericId(vendorId, "Orderr");
   const create = new Order(req.body);
   const created = await create.save();
 
@@ -399,8 +396,11 @@ const bookOrderInvoice = async (req, res) => {
     let invoice = await Invoice.findOne({ orderId: order._id });
 
     if (!invoice) {
+      const invoiceNumber = await generateAlphanumericId(vendorId, "Invoice");
+
       invoice = new Invoice({
         vendorId,
+        invoiceNumber,
         orderId: order._id,
         customerId: order.customerId,
         invoiceRefrence: reference,

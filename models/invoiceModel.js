@@ -43,22 +43,6 @@ const InvoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-InvoiceSchema.pre("save", async function (next) {
-  if (!this.isNew) return next(); // Only for new documents
-
-  try {
-    const deliveryNumber = await getNextSequenceValue("deliveryNumber");
-    this.deliveryNumber = `DN${String(deliveryNumber).padStart(2, "0")}`;
-
-    const invoiceNumber = await getNextSequenceValue("invoiceNumber");
-    this.invoiceNumber = `INV-${String(invoiceNumber).padStart(5, "0")}`;
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
 const Invoice = mongoose.model("Invoice", InvoiceSchema);
 
 module.exports = Invoice;

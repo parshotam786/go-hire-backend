@@ -3,7 +3,7 @@ const Vender = require("../models/venderModel");
 const Customer = require("../models/customers");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const upload = require("../utiles/multerConfig");
+const { upload, uploadLogo } = require("../utiles/multerConfig");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
 const Documents = require("../models/documentNumber");
@@ -338,7 +338,6 @@ const UserProfile = async (req, res) => {
 };
 
 const updateProfilePicture = (req, res) => {
-  console.log("text");
   upload(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: err });
@@ -380,6 +379,59 @@ const getProfilePicture = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Vender.findById(id).select("profile_Picture");
+
+    if (!user) {
+      return res.status(404).json({ error: "Profile picture not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ error: "", details: error.message });
+  }
+};
+// brand logo
+const updateBrandLogo = (req, res) => {
+  uploadLogo(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err });
+    }
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
+    }
+
+    try {
+      const vender = await Vender.findByIdAndUpdate(
+        req.params.id,
+        { brandLogo: req.file.path },
+        { new: true }
+      ).select("-__v -password");
+
+      if (!vender) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Vendor not found" });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Logo has been update successfully!",
+        data: {
+          user: vender,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
+  });
+};
+
+const getBrandLogo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Vender.findById(id).select("brandLogo");
 
     if (!user) {
       return res.status(404).json({ error: "Profile picture not found" });
@@ -596,6 +648,8 @@ module.exports = {
   UserProfile,
   updateProfilePicture,
   getProfilePicture,
+  updateBrandLogo,
+  getBrandLogo,
   updateUserdata,
   updateVendorStatus,
   removeVenderAccount,

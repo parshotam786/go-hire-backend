@@ -66,9 +66,7 @@ router.get("/admin-directory", AdminDirectory);
 router.get("/vender/directory", VenderDirectory);
 router.get("/vender/profile/:id", UserProfile);
 router.put("/vender/profile-picture/:id", updateProfilePicture);
-router.get("/vender/profile-picture/:id", getProfilePicture);
 router.put("/vender/brand-logo/:id", updateBrandLogo);
-router.get("/vender/brand-logo/:id", getBrandLogo);
 router.delete("/vender/:id", removeVenderAccount);
 
 router.put("/vender/:id", updateUserdata);

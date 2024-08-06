@@ -28,8 +28,33 @@ exports.addProduct = async (req, res) => {
       height,
     } = req.body;
 
+    // Validate required fields
+    if (!productName) {
+      return res.status(400).json({ message: "Product name is required." });
+    }
+    if (!companyProductName) {
+      return res.status(400).json({ message: "Company product name is required." });
+    }
+    if (!productDescription) {
+      return res.status(400).json({ message: "Description is required." });
+    }
+    if (!category) {
+      return res.status(400).json({ message: "Category is required." });
+    }
+    if (!subCategory) {
+      return res.status(400).json({ message: "Sub category is required." });
+    }
+    if (!vendorId) {
+      return res.status(400).json({ message: "Vendor ID is required." });
+    }
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "Images are required." });
+    }
+
+    // Collect file paths
     const images = req.files.map((file) => file.path);
 
+    // Create a new product
     const product = new Product({
       productName,
       companyProductName,
@@ -54,14 +79,20 @@ exports.addProduct = async (req, res) => {
       vendorId,
       images,
     });
+
+    // Save the product
     await product.save();
+
+    // Respond with success message
     res.status(201).json({ message: "Product added successfully", product });
+
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error adding product", details: error.message });
+    // Handle unexpected errors
+    console.error("Error adding product:", error);
+    res.status(500).json({ message: "An error occurred while adding the product." });
   }
 };
+
 
 // Update Product Api
 exports.updateProduct = async (req, res) => {

@@ -28,17 +28,52 @@ const getOrder = async (req, res) => {
   return res.status(200).json({ data: findOrder,success:true });
 };
 
+// Get all order - Paginations
 const getAllOrders = async (req, res) => {
-  const page = req?.query?.page ?? 1;
-  const limit = req?.query?.limit ?? 30;
-  const findOrders = await Order.find({ vendorId: req.user?._id })
-    .populate(["products.product", "customerId"])
-    .sort("-createdAt")
-    .skip((page - 1) * limit)
-    .limit(limit);
+  try {
+    // Extract query parameters for pagination and search
+    const page = parseInt(req.query.page, 10) || 1;  // Default to page 1 if not provided
+    const limit = parseInt(req.query.limit, 10) || 30;  // Default to 30 items per page if not provided
+    const searchQuery = req.query.search || "";  // Search query parameter
 
-  return res.status(200).json({ data: findOrders });
+    // Build the search query object
+    const searchCriteria = {
+      vendorId: req.user?._id,  // Filter by vendorId from the authenticated user
+      $or: [  // Search within certain fields
+        { orderId: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on orderId
+        { account: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on account
+        { billingPlaceName: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on billingPlaceName
+        { address1: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on address1
+        { city: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on city
+        { country: { $regex: searchQuery, $options: 'i' } }  // Case-insensitive search on country
+      ]
+    };
+
+    // Fetch orders with pagination, search, and sorting
+    const findOrders = await Order.find(searchCriteria)
+      .populate(["products.product", "customerId"])
+      .sort("-createdAt")
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Count total matching documents for pagination info
+    const totalOrders = await Order.countDocuments(searchCriteria);
+
+    return res.status(200).json({
+      data: findOrders,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalOrders / limit),
+        totalItems: totalOrders
+      },
+      success:true,
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return res.status(500).json({ error: "Internal server error",success:false});
+  }
 };
+
 const createOrder = async (req, res) => {
   const { account, customerId } = req.body;
   const { _id: vendorId } = req.user;

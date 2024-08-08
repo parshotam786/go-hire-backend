@@ -4,6 +4,8 @@ const connectDB = require("./config/db"); // Adjust the path as necessary
 var cors = require("cors");
 const path = require("path");
 const { authenticateUser } = require("./utiles/userAccessMiddleware");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./swaggerOptions');
 const port = process.env.PORT || 5000;
 const routes = [
   "customersRoutes",
@@ -16,7 +18,10 @@ const routes = [
 const app = express();
 app.use(cors());
 connectDB();
+// Set up Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use(express.json());
+
 app.use("/images", express.static(path.join(__dirname, "images"))); // Serve images statically
 app.use(express.urlencoded({ extended: false }));
 

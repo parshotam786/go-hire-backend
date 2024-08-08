@@ -19,13 +19,15 @@ const app = express();
 app.use(cors());
 connectDB();
 // Set up Swagger UI
-app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use(express.json());
 
 app.use("/images", express.static(path.join(__dirname, "images"))); // Serve images statically
 app.use(express.urlencoded({ extended: false }));
 
-
+app.get("/", (req, res) => {
+  res.send({ message: "sccess" });
+});
 
 routes.forEach((route) => {
   app.use("/api", require(`./routes/${route}`));

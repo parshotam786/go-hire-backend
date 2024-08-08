@@ -11,7 +11,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:7000',
+        url: 'https://gohire-backend-nj2d7.ondigitalocean.app/',
       },
     ],
     components: {

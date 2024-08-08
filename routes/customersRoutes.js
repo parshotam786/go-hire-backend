@@ -10,7 +10,7 @@ const router = require("express").Router();
 
 /**
  * @openapi
- * /customer/add:
+ * /api/customer/add:
  *   post:
  *     summary: Add a new customer
  *     tags:
@@ -24,11 +24,80 @@ const router = require("express").Router();
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "John Doe"
+ *               thumbnail:
+ *                 type: string
+ *                 example: "/images/default-image.png"
+ *               number:
+ *                 type: string
+ *                 example: "1234567890"
+ *               owner:
+ *                 type: string
+ *                 example: "Company Owner"
+ *               stop:
+ *                 type: boolean
+ *                 example: false
+ *               active:
+ *                 type: boolean
+ *                 example: true
+ *               cashCustomer:
+ *                 type: boolean
+ *                 example: false
+ *               canTakePayments:
+ *                 type: boolean
+ *                 example: true
+ *               addressLine1:
+ *                 type: string
+ *                 example: "123 Main St"
+ *               addressLine2:
+ *                 type: string
+ *                 example: "Suite 456"
+ *               city:
+ *                 type: string
+ *                 example: "Anytown"
+ *               country:
+ *                 type: string
+ *                 example: "Country"
+ *               postCode:
+ *                 type: string
+ *                 example: "12345"
  *               email:
  *                 type: string
  *                 format: email
- *               phone:
+ *                 example: "email@example.com"
+ *               fax:
  *                 type: string
+ *                 example: "123-456-7890"
+ *               telephone:
+ *                 type: string
+ *                 example: "098-765-4321"
+ *               website:
+ *                 type: string
+ *                 example: "https://example.com"
+ *               type:
+ *                 type: string
+ *                 example: "Individual"
+ *               industry:
+ *                 type: string
+ *                 example: "Retail"
+ *               status:
+ *                 type: string
+ *                 example: "Active"
+ *               taxClass:
+ *                 type: string
+ *                 example: "Standard"
+ *               parentAccount:
+ *                 type: string
+ *                 example: "Parent Account Name"
+ *               invoiceRunCode:
+ *                 type: string
+ *                 example: "IR123"
+ *               paymentTerm:
+ *                 type: string
+ *                 example: "Net 30"
+ *               vendorId:
+ *                 type: string
+ *                 example: "60e73acfb61f8b1a30e1c9e8"
  *     responses:
  *       201:
  *         description: Customer created successfully
@@ -39,20 +108,25 @@ const router = require("express").Router();
  *               properties:
  *                 id:
  *                   type: string
+ *                   example: "60e73acfb61f8b1a30e1c9e8"
  *                 name:
  *                   type: string
+ *                   example: "John Doe"
  *                 email:
  *                   type: string
+ *                   example: "email@example.com"
  *                 phone:
  *                   type: string
+ *                   example: "1234567890"
  *       400:
  *         description: Bad request
  */
+
 router.post("/customer/add", addCustomer);
 
 /**
  * @openapi
- * /customer:
+ * /api/customer:
  *   get:
  *     summary: Retrieve a list of customers
  *     tags:
@@ -80,7 +154,7 @@ router.get("/customer", getCustomer);
 
 /**
  * @openapi
- * /customer/{id}:
+ * /api/customer/{id}:
  *   get:
  *     summary: Retrieve a customer by ID
  *     tags:
@@ -115,7 +189,7 @@ router.get("/customer/:id", getCustomerById);
 
 /**
  * @openapi
- * /customer/{id}:
+ * /api/customer/{id}:
  *   put:
  *     summary: Update a customer by ID
  *     tags:
@@ -166,7 +240,7 @@ router.put("/customer/:id", updateCustomer);
 
 /**
  * @openapi
- * /customer/{id}:
+ * /api/customer/{id}:
  *   delete:
  *     summary: Delete a customer by ID
  *     tags:

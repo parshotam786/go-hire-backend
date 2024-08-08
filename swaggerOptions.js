@@ -11,8 +11,11 @@ const options = {
     },
     servers: [
       {
-        url: 'https://gohire-backend-nj2d7.ondigitalocean.app/',
+        url: 'http://localhost:7000',
       },
+      {
+        url:"https://gohire-backend-nj2d7.ondigitalocean.app/"
+      }
     ],
     components: {
       securitySchemes: {
@@ -20,7 +23,7 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT', // Optional, but helps indicate the token format
-          description: 'Enter your token in the format `Bearer <token>`'
+          description: ' Enter your token in the format `Bearer <token>`'
         },
       },
     },

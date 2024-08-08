@@ -19,7 +19,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * /get-all-orders:
+ * /api/order/get-all-orders:
  *   get:
  *     summary: Retrieve all orders
  *     tags:
@@ -48,7 +48,7 @@ router.get("/get-all-orders", getAllOrders);
 
 /**
  * @openapi
- * /{id}:
+ * /api/order/{id}:
  *   get:
  *     summary: Retrieve an order by ID
  *     tags:

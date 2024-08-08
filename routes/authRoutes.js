@@ -86,10 +86,9 @@ router.post("/admin-register", AdminRegister);
  */
 router.post("/admin-login", AdminLogin);
 
-// Vendor Registration
 /**
  * @openapi
- * /vender-register:
+ * /api/vender-register:
  *   post:
  *     summary: Register a new vendor
  *     tags:
@@ -101,24 +100,100 @@ router.post("/admin-login", AdminLogin);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               companyName:
  *                 type: string
+ *                 example: "Company Inc."
+ *               legalName:
+ *                 type: string
+ *                 example: "Legal Name Inc."
+ *               businessType:
+ *                 type: string
+ *                 example: "Retail"
+ *               taxId:
+ *                 type: string
+ *                 example: "123456789"
+ *               primaryContact:
+ *                 type: string
+ *                 example: "John Doe"
+ *               primaryPhone:
+ *                 type: string
+ *                 example: "+1234567890"
  *               password:
  *                 type: string
+ *                 example: "password123"
  *               email:
  *                 type: string
+ *                 example: "email@example.com"
+ *               street:
+ *                 type: string
+ *                 example: "123 Main St"
+ *               city:
+ *                 type: string
+ *                 example: "Anytown"
+ *               state:
+ *                 type: string
+ *                 example: "State"
+ *               zip:
+ *                 type: string
+ *                 example: "12345"
+ *               country:
+ *                 type: string
+ *                 example: "Country"
+ *               bankName:
+ *                 type: string
+ *                 example: "Bank Name"
+ *               bankAddress:
+ *                 type: string
+ *                 example: "Bank Address"
+ *               accountName:
+ *                 type: string
+ *                 example: "Account Name"
+ *               accountNumber:
+ *                 type: string
+ *                 example: "1234567890123456"
+ *               swiftCode:
+ *                 type: string
+ *                 example: "ABCDEF12"
+ *               iban:
+ *                 type: string
+ *                 example: "GB33BUKB20201555555555"
+ *               declaration:
+ *                 type: string
+ *                 example: "I declare..."
+ *               signature:
+ *                 type: string
+ *                 example: "Signature"
+ *               name:
+ *                 type: string
+ *                 example: "Vendor Name"
+ *               profile_Picture:
+ *                 type: string
+ *                 example: "images/default-avatar.jpg"
+ *               brandLogo:
+ *                 type: string
+ *                 example: "images/dummylogo.png"
+ *               role:
+ *                 type: string
+ *                 example: "Seller"
+ *               status:
+ *                 type: string
+ *                 example: "inactive"
+ *               rating:
+ *                 type: number
+ *                 example: 4.5
  *     responses:
  *       201:
  *         description: Vendor registered successfully
  *       400:
  *         description: Bad request
  */
+
 router.post("/vender-register", VenderRegister);
 
 // Vendor Login
 /**
  * @openapi
- * /vender-login:
+ * /api/vender-login:
  *   post:
  *     summary: Vendor login
  *     tags:
@@ -130,7 +205,7 @@ router.post("/vender-register", VenderRegister);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               email:
  *                 type: string
  *               password:
  *                 type: string
@@ -145,7 +220,7 @@ router.post("/vender-login", VenderLogin);
 // Update Vendor Status
 /**
  * @openapi
- * /vender/status:
+ * /api/vender/status:
  *   post:
  *     summary: Update the status of a vendor
  *     tags:
@@ -157,7 +232,7 @@ router.post("/vender-login", VenderLogin);
  *           schema:
  *             type: object
  *             properties:
- *               vendorId:
+ *               venderId:
  *                 type: string
  *               status:
  *                 type: string
@@ -172,7 +247,7 @@ router.post("/vender/status", updateVenderStatus);
 // Get Admin Directory
 /**
  * @openapi
- * /admin-directory:
+ * /api/admin-directory:
  *   get:
  *     summary: Get a list of admins
  *     tags:
@@ -197,7 +272,7 @@ router.get("/admin-directory", AdminDirectory);
 // Get Vendor Directory
 /**
  * @openapi
- * /vender-directory:
+ * /api/vender-directory:
  *   get:
  *     summary: Get a list of vendors
  *     tags:
@@ -222,7 +297,7 @@ router.get("/vender-directory", VenderDirectory);
 // Get Vendor Profile
 /**
  * @openapi
- * /vender/profile/{id}:
+ * /api/vender/profile/{id}:
  *   get:
  *     summary: Get profile of a specific vendor
  *     tags:
@@ -242,19 +317,13 @@ router.get("/vender-directory", VenderDirectory);
  *             schema:
  *               type: object
  *               properties:
- *                 id:
- *                   type: string
- *                 username:
- *                   type: string
- *                 email:
- *                   type: string
  */
 router.get("/vender/profile/:id", UserProfile);
 
 // Update Vendor Profile Picture
 /**
  * @openapi
- * /vender/profile-picture/{id}:
+ * /api/vender/profile-picture/{id}:
  *   put:
  *     summary: Update the profile picture of a vendor
  *     tags:
@@ -273,7 +342,7 @@ router.get("/vender/profile/:id", UserProfile);
  *           schema:
  *             type: object
  *             properties:
- *               profilePicture:
+ *               profile_Picture:
  *                 type: string
  *                 format: binary
  *     responses:
@@ -287,7 +356,7 @@ router.put("/vender/profile-picture/:id", updateProfilePicture);
 // Update Vendor Brand Logo
 /**
  * @openapi
- * /vender/brand-logo/{id}:
+ * /api/vender/brand-logo/{id}:
  *   put:
  *     summary: Update the brand logo of a vendor
  *     tags:
@@ -320,7 +389,7 @@ router.put("/vender/brand-logo/:id", updateBrandLogo);
 // Remove Vendor Account
 /**
  * @openapi
- * /vender/{id}:
+ * /api/vender/{id}:
  *   delete:
  *     summary: Remove a vendor account
  *     tags:
@@ -340,10 +409,9 @@ router.put("/vender/brand-logo/:id", updateBrandLogo);
  */
 router.delete("/vender/:id", removeVenderAccount);
 
-// Update Vendor User Data
 /**
  * @openapi
- * /vender/{id}:
+ * /api/vender/{id}:
  *   put:
  *     summary: Update data of a specific vendor
  *     tags:
@@ -362,22 +430,64 @@ router.delete("/vender/:id", removeVenderAccount);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               primaryContact:
  *                 type: string
+ *               bankAddress:
+ *                 type: string
+ *               street:
+ *                 type: string
+ *               companyName:
+ *                 type: string
+ *               legalName:
+ *                 type: string
+ *               businessType:
+ *                 type: string
+ *                 example: "Retail"
+ *               taxId:
+ *                 type: string
+ *               swiftCode:
+ *                 type: string
+ *                 example: "ABCDEF12"
+ *               iban:
+ *                 type: string
+ *                 example: "GB33BUKB20201555555555"
+ *               zip:
+ *                 type: string
+ *                 example: "12345"
+ *               city:
+ *                 type: string
+ *                 example: "Anytown"
+ *               state:
+ *                 type: string
+ *                 example: "State"
  *               email:
  *                 type: string
+ *                 example: "email@example.com"
+ *               primaryPhone:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               country:
+ *                 type: string
+ *                 example: "Country"
+ *               accountName:
+ *                 type: string
+ *                 example: "Account Name"
+ *               accountNumber:
+ *                 type: string
+ *                 example: "1234567890123456"
  *     responses:
  *       200:
  *         description: Vendor data updated successfully
  *       400:
  *         description: Bad request
  */
+
 router.put("/vender/:id", updateUserdata);
 
 // Update Vendor Status
 /**
  * @openapi
- * /vender/update-status/{id}:
+ * /api/vender/update-status/{id}:
  *   put:
  *     summary: Update the status of a vendor
  *     tags:
@@ -409,7 +519,7 @@ router.put("/vender/update-status/:id", updateVendorStatus);
 // Add Invoice Data
 /**
  * @openapi
- * /vender/invoice:
+ * /api/vender/invoice:
  *   post:
  *     summary: Add invoice data for a vendor
  *     tags:

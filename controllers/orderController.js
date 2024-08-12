@@ -8,9 +8,10 @@ const { errorResponse, successResponse } = require("../utiles/responses");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
-
+console.log({document})
   const uniqueId =
-    document.code + (document.seed + document.counter).toString();
+    document.code + "-" + (document.seed + document.counter).toString();
+    console.log({uniqueId})
 
   return uniqueId;
 };
@@ -24,30 +25,66 @@ const getOrder = async (req, res) => {
   if (!findOrder) {
     return res.status(404).json({ error: "Order not found" });
   }
-  return res.status(200).json({ data: findOrder });
+  return res.status(200).json({ data: findOrder,success:true });
 };
 
+// Get all order - Paginations
 const getAllOrders = async (req, res) => {
-  const page = req?.query?.page ?? 1;
-  const limit = req?.query?.limit ?? 30;
-  const findOrders = await Order.find({ vendorId: req.user?._id })
-    .populate(["products.product", "customerId"])
-    .sort("-createdAt")
-    .skip((page - 1) * limit)
-    .limit(limit);
+  try {
+    // Extract query parameters for pagination and search
+    const page = parseInt(req.query.page, 10) || 1;  // Default to page 1 if not provided
+    const limit = parseInt(req.query.limit, 10) || 30;  // Default to 30 items per page if not provided
+    const searchQuery = req.query.search || "";  // Search query parameter
 
-  return res.status(200).json({ data: findOrders });
+    // Build the search query object
+    const searchCriteria = {
+      vendorId: req.user?._id,  // Filter by vendorId from the authenticated user
+      $or: [  // Search within certain fields
+        { orderId: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on orderId
+        { account: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on account
+        { billingPlaceName: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on billingPlaceName
+        { address1: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on address1
+        { city: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on city
+        { country: { $regex: searchQuery, $options: 'i' } }  // Case-insensitive search on country
+      ]
+    };
+
+    // Fetch orders with pagination, search, and sorting
+    const findOrders = await Order.find(searchCriteria)
+      .populate(["products.product", "customerId"])
+      .sort("-createdAt")
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Count total matching documents for pagination info
+    const totalOrders = await Order.countDocuments(searchCriteria);
+
+    return res.status(200).json({
+      data: findOrders,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalOrders / limit),
+        totalItems: totalOrders
+      },
+      success:true,
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return res.status(500).json({ error: "Internal server error",success:false});
+  }
 };
+
 const createOrder = async (req, res) => {
   const { account, customerId } = req.body;
   const { _id: vendorId } = req.user;
 
-  req.body.orderId = await generateAlphanumericId(vendorId, "Orderr");
+  req.body.orderId = await generateAlphanumericId(vendorId, "Order");
   const create = new Order(req.body);
   const created = await create.save();
 
-  await Document.findOneAndUpdate(
-    { name: "Order" },
+   await Document.findOneAndUpdate(
+
+    { name: "Order" ,vendorId:vendorId},
     { $inc: { counter: 1 } },
     { new: true }
   );
@@ -60,6 +97,45 @@ const createOrder = async (req, res) => {
     });
   }
 };
+//updated order api
+
+const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params; // Order ID from the URL parameter
+    const updates = req.body; // Fields to update from the request body
+    
+
+    // Convert orderId to ObjectId if it's a string
+
+    // Find the order by ID and update it
+    const updatedOrder = await Order.findByIdAndUpdate(
+      {_id:id}, // Find the order by _id
+      { $set: updates }, // Apply updates
+      { new: true, runValidators: true } // Return the updated document and run validators
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      data: updatedOrder,
+      message: "Order updated successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return res.status(500).json({
+      message: "Error updating order",
+      success: false,
+    });
+  }
+};
+
+
 
 // Get Customer Orders
 const getCustomerOrders = async (req, res) => {
@@ -408,7 +484,13 @@ const bookOrderInvoice = async (req, res) => {
       });
 
       const results = await invoice.save();
+      await Document.findOneAndUpdate(
 
+        { name: "Invoice" ,vendorId:vendorId},
+        { $inc: { counter: 1 } },
+        { new: true }
+      );
+    
       return successResponse(res, {
         message: "invoice generated succesfully",
         data: { invoiceId: results._id, productIds },
@@ -541,6 +623,7 @@ const generateOrderInvoice = async (req, res) => {
 module.exports = {
   getOrder,
   createOrder,
+  updateOrder,
   getAllOrders,
   getOrderProduct,
   addProductInOrder,

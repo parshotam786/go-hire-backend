@@ -11,6 +11,7 @@ const {
 const multer = require("multer");
 const router = require("express").Router();
 const path = require("path");
+const { OpenAIHandler } = require("../controllers/openAiController");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -48,5 +49,6 @@ router.delete("/product/:productId/image", deleteProductImage);
 router.get("/product-list", ProductList);
 router.post("/product-lists", getProductsByVendorId);
 router.get("/product/list", getProductsBySearch);
+router.post("/product/description", OpenAIHandler);
 
 module.exports = router;

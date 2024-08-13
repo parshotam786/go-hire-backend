@@ -12,6 +12,9 @@ const {
   generateOrderInvoice,
   bookOrderInvoice,
   updateOrder,
+  orderBookOut,
+  orderBookIn,
+  generateOrderNote,
 } = require("../controllers/orderController");
 const allowedRoles = require("../utiles/allowRoles");
 
@@ -442,5 +445,8 @@ router.post("/book", bookOrderInvoice);
  *         description: Order not found
  */
 router.post("/invoice", generateOrderInvoice);
+router.post("/bookout", orderBookOut);
+router.post("/bookin", orderBookIn);
+router.post("/generate-order-note", generateOrderNote);
 
 module.exports = router;

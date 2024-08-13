@@ -6,27 +6,22 @@ const {
 
 /**
  * @openapi
- * /category:
+ * /api/category:
  *   get:
- *     summary: Retrieve all categories
+ *     summary: Retrieve all categories if you dont pass the parentId. to get sub category add parentId
  *     tags:
  *       - Category
+ *     parameters:
+ *       - in: query
+ *         name: parentId
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: A list of categories
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   name:
- *                     type: string
- *                   description:
- *                     type: string
  */
 router.get("/category", getAllCategory);
 
@@ -46,7 +41,7 @@ router.get("/category", getAllCategory);
  *             properties:
  *               name:
  *                 type: string
- *               description:
+ *               parentId:
  *                 type: string
  *     responses:
  *       201:
@@ -54,14 +49,6 @@ router.get("/category", getAllCategory);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 name:
- *                   type: string
- *                 description:
- *                   type: string
  *       400:
  *         description: Bad request
  */

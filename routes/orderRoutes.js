@@ -12,6 +12,9 @@ const {
   generateOrderInvoice,
   bookOrderInvoice,
   updateOrder,
+  orderBookOut,
+  orderBookIn,
+  generateOrderNote,
 } = require("../controllers/orderController");
 const allowedRoles = require("../utiles/allowRoles");
 
@@ -30,5 +33,8 @@ router.put("/product/status", allocateOrderProducts);
 router.put("/update-product-items", updateOrderProduct);
 router.post("/book", bookOrderInvoice);
 router.post("/invoice", generateOrderInvoice);
+router.post("/bookout", orderBookOut);
+router.post("/bookin", orderBookIn);
+router.post("/generate-order-note", generateOrderNote);
 
 module.exports = router;

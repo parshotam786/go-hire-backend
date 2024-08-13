@@ -5,13 +5,13 @@ const Product = require("../models/productModel");
 const Document = require("../models/documentNumber");
 
 const { errorResponse, successResponse } = require("../utiles/responses");
+const DeliverNote = require("../models/deliveryNote");
+const ReturnNote = require("../models/returnNote");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
-console.log({document})
   const uniqueId =
     document.code + "-" + (document.seed + document.counter).toString();
-    console.log({uniqueId})
 
   return uniqueId;
 };
@@ -25,28 +25,29 @@ const getOrder = async (req, res) => {
   if (!findOrder) {
     return res.status(404).json({ error: "Order not found" });
   }
-  return res.status(200).json({ data: findOrder,success:true });
+  return res.status(200).json({ data: findOrder, success: true });
 };
 
 // Get all order - Paginations
 const getAllOrders = async (req, res) => {
   try {
     // Extract query parameters for pagination and search
-    const page = parseInt(req.query.page, 10) || 1;  // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit, 10) || 30;  // Default to 30 items per page if not provided
-    const searchQuery = req.query.search || "";  // Search query parameter
+    const page = parseInt(req.query.page, 10) || 1; // Default to page 1 if not provided
+    const limit = parseInt(req.query.limit, 10) || 30; // Default to 30 items per page if not provided
+    const searchQuery = req.query.search || ""; // Search query parameter
 
     // Build the search query object
     const searchCriteria = {
-      vendorId: req.user?._id,  // Filter by vendorId from the authenticated user
-      $or: [  // Search within certain fields
-        { orderId: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on orderId
-        { account: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on account
-        { billingPlaceName: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on billingPlaceName
-        { address1: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on address1
-        { city: { $regex: searchQuery, $options: 'i' } },  // Case-insensitive search on city
-        { country: { $regex: searchQuery, $options: 'i' } }  // Case-insensitive search on country
-      ]
+      vendorId: req.user?._id, // Filter by vendorId from the authenticated user
+      $or: [
+        // Search within certain fields
+        { orderId: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on orderId
+        { account: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on account
+        { billingPlaceName: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on billingPlaceName
+        { address1: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on address1
+        { city: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on city
+        { country: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on country
+      ],
     };
 
     // Fetch orders with pagination, search, and sorting
@@ -64,13 +65,15 @@ const getAllOrders = async (req, res) => {
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalOrders / limit),
-        totalItems: totalOrders
+        totalItems: totalOrders,
       },
-      success:true,
+      success: true,
     });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return res.status(500).json({ error: "Internal server error",success:false});
+    return res
+      .status(500)
+      .json({ error: "Internal server error", success: false });
   }
 };
 
@@ -82,9 +85,8 @@ const createOrder = async (req, res) => {
   const create = new Order(req.body);
   const created = await create.save();
 
-   await Document.findOneAndUpdate(
-
-    { name: "Order" ,vendorId:vendorId},
+  await Document.findOneAndUpdate(
+    { name: "Order", vendorId: vendorId },
     { $inc: { counter: 1 } },
     { new: true }
   );
@@ -103,13 +105,12 @@ const updateOrder = async (req, res) => {
   try {
     const { id } = req.params; // Order ID from the URL parameter
     const updates = req.body; // Fields to update from the request body
-    
 
     // Convert orderId to ObjectId if it's a string
 
     // Find the order by ID and update it
     const updatedOrder = await Order.findByIdAndUpdate(
-      {_id:id}, // Find the order by _id
+      { _id: id }, // Find the order by _id
       { $set: updates }, // Apply updates
       { new: true, runValidators: true } // Return the updated document and run validators
     );
@@ -135,13 +136,10 @@ const updateOrder = async (req, res) => {
   }
 };
 
-
-
 // Get Customer Orders
 const getCustomerOrders = async (req, res) => {
   const page = req?.query?.page ?? 1;
   const limit = req?.query?.limit ?? 30;
-  console.log("a", page, limit);
   const findOrders = await Order.find({ vendorId: req.user?._id })
     .populate(["products.product", "customerId"])
     .sort("-createdAt")
@@ -485,12 +483,11 @@ const bookOrderInvoice = async (req, res) => {
 
       const results = await invoice.save();
       await Document.findOneAndUpdate(
-
-        { name: "Invoice" ,vendorId:vendorId},
+        { name: "Invoice", vendorId: vendorId },
         { $inc: { counter: 1 } },
         { new: true }
       );
-    
+
       return successResponse(res, {
         message: "invoice generated succesfully",
         data: { invoiceId: results._id, productIds },
@@ -619,6 +616,178 @@ const generateOrderInvoice = async (req, res) => {
   }
 };
 
+const generateOrderNote = async (req, res) => {
+  const { id, type } = req.body;
+
+  if (!id || !type) {
+    return errorResponse(res, { message: "Invalid fields!" });
+  }
+
+  const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
+
+  try {
+    const [deliveryData] = await Model.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "orderDetails",
+        },
+      },
+      {
+        $unwind: "$orderDetails",
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "orderDetails.customerId",
+          foreignField: "_id",
+          as: "customerDetails",
+        },
+      },
+      {
+        $unwind: "$customerDetails",
+      },
+      // {
+      //   $lookup: {
+      //     from: "products",
+      //     localField: "products.product",
+      //     foreignField: "_id",
+      //     as: "products",
+      //   },
+      // },
+      // {
+      //   $project: {
+      //     productDetails: 0, // Remove the temporary field used for merging
+      //   },
+      // },
+    ]);
+
+    if (!deliveryData) {
+      return errorResponse(res, { message: "No data found" });
+    }
+
+    const populatedData = await Model.findById(id).populate({
+      path: "products.product",
+      select: "productName status",
+    });
+
+    const mergedProducts = deliveryData.products.map((product) => {
+      const populatedProduct = populatedData.products.find(
+        (p) => p.product._id.toString() === product.product.toString()
+      );
+
+      if (populatedProduct) {
+        return {
+          ...product,
+          productName: populatedProduct.product.productName,
+          type: populatedProduct.product.status,
+        };
+      }
+
+      return product;
+    });
+
+    deliveryData.products = mergedProducts;
+
+    return successResponse(res, {
+      data: deliveryData,
+      message: "Invoice fetched successfully",
+    });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
+const handleOrderBooking = async (req, res, type) => {
+  const { orderId, productIds = [], reference, bookDate } = req.body;
+  const vendorId = req.user._id;
+
+  const NoteModel = type === "bookOut" ? DeliverNote : ReturnNote;
+  const noteType = type === "bookOut" ? "Delivery Note" : "Return Note";
+  const productStatus = type === "bookOut" ? "onrent" : "offrent";
+
+  try {
+    const order = await Order.findById(orderId).populate("products.product");
+
+    if (!order) {
+      return errorResponse(res, { message: "Order not found", code: 404 });
+    }
+
+    const productsToBook = order.products.filter((prd) =>
+      productIds.includes(prd._id.toString())
+    );
+
+    if (productsToBook.length === 0) {
+      return errorResponse(res, {
+        message: "No matching products found in the order",
+      });
+    }
+
+    const updatedProducts = productsToBook.map((prd) => ({
+      ...prd.toObject(),
+      status: productStatus,
+    }));
+
+    const note = new NoteModel({
+      customerId: order.customerId,
+      orderId: order._id,
+      vendorId,
+      products: updatedProducts,
+      reference,
+      [`${type === "bookOut" ? "bookDate" : "returnDate"}`]: bookDate,
+      [`${type === "bookOut" ? "deliveryNote" : "returnNote"}`]:
+        await generateAlphanumericId(vendorId, noteType),
+    });
+
+    const results = await note.save();
+
+    await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $set: {
+          "products.$[elem].status": productStatus,
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            "elem._id": {
+              $in: productIds.map((id) => new mongoose.Types.ObjectId(id)),
+            },
+          },
+        ],
+        new: true,
+      }
+    );
+
+    await Document.findOneAndUpdate(
+      { name: noteType, vendorId },
+      { $inc: { counter: 1 } },
+      { new: true }
+    );
+
+    return successResponse(res, {
+      message: `${noteType} created successfully`,
+      code: 201,
+      data: {
+        noteId: results._id,
+        productIds,
+        deliveryType: type === "bookOut" ? "DN" : "RN",
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+
+const orderBookIn = (req, res) => handleOrderBooking(req, res, "bookIn");
+const orderBookOut = (req, res) => handleOrderBooking(req, res, "bookOut");
+
 //exports
 module.exports = {
   getOrder,
@@ -633,4 +802,7 @@ module.exports = {
   deleteProductFromOrder,
   generateOrderInvoice,
   bookOrderInvoice,
+  orderBookOut,
+  orderBookIn,
+  generateOrderNote,
 };

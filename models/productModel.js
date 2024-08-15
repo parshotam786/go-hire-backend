@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema(
       ref: "Category",
     },
     salePrice: { type: String },
-    quantity: { type: String, required: true },
+    quantity: { type: Number, required: true },
     minHireTime: { type: String },
     range: { type: String },
     vat: { type: String },

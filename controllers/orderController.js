@@ -188,6 +188,22 @@ const addProductInOrder = async (req, res) => {
   }
 
   try {
+    const productDoc = await Product.findById(rest.product);
+
+    if (!productDoc) {
+      return res.status(400).json({ error: "product not found" });
+    }
+
+    const availableQuantity = parseInt(productDoc.quantity);
+
+    if (availableQuantity === 0) {
+      return res.status(400).json({ error: "Product is out of stock!" });
+    } else if (availableQuantity < parseInt(rest.quantity)) {
+      return res
+        .status(400)
+        .json({ error: `Only ${availableQuantity} units available in stock!` });
+    }
+
     const updated = await Order.findOneAndUpdate(
       { _id: orderId },
       { $addToSet: { products: { ...rest, status: "allocated" } } },
@@ -765,6 +781,19 @@ const handleOrderBooking = async (req, res, type) => {
       }
     );
 
+    for (const prd of productsToBook) {
+      const product = await Product.findById(prd.product);
+      const currentQuantity = Number(product.quantity);
+      const newQuantity =
+        type === "bookOut"
+          ? currentQuantity - prd.quantity
+          : currentQuantity + prd.quantity;
+
+      await Product.findByIdAndUpdate(prd.product._id, {
+        $set: { quantity: newQuantity.toString() }, // Convert number back to string
+      });
+    }
+
     await Document.findOneAndUpdate(
       { name: noteType, vendorId },
       { $inc: { counter: 1 } },
@@ -781,6 +810,7 @@ const handleOrderBooking = async (req, res, type) => {
       },
     });
   } catch (error) {
+    console.log(error);
     return errorResponse(res, { message: error?.message || "Server Error!" });
   }
 };
@@ -802,7 +832,7 @@ module.exports = {
   deleteProductFromOrder,
   generateOrderInvoice,
   bookOrderInvoice,
-  orderBookOut,
   orderBookIn,
+  orderBookOut,
   generateOrderNote,
 };

@@ -790,7 +790,7 @@ const handleOrderBooking = async (req, res, type) => {
           : currentQuantity + prd.quantity;
 
       await Product.findByIdAndUpdate(prd.product._id, {
-        $set: { quantity: newQuantity.toString() }, // Convert number back to string
+        $set: { quantity: parseInt(newQuantity) },
       });
     }
 

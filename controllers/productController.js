@@ -33,7 +33,9 @@ exports.addProduct = async (req, res) => {
       return res.status(400).json({ message: "Product name is required." });
     }
     if (!companyProductName) {
-      return res.status(400).json({ message: "Company product name is required." });
+      return res
+        .status(400)
+        .json({ message: "Company product name is required." });
     }
     if (!productDescription) {
       return res.status(400).json({ message: "Description is required." });
@@ -65,7 +67,7 @@ exports.addProduct = async (req, res) => {
       rentDuration,
       subCategory,
       salePrice,
-      quantity,
+      quantity: parseInt(quantity),
       range,
       minHireTime,
       vat,
@@ -85,14 +87,14 @@ exports.addProduct = async (req, res) => {
 
     // Respond with success message
     res.status(201).json({ message: "Product added successfully", product });
-
   } catch (error) {
     // Handle unexpected errors
     console.error("Error adding product:", error);
-    res.status(500).json({ message: "An error occurred while adding the product." });
+    res
+      .status(500)
+      .json({ message: "An error occurred while adding the product." });
   }
 };
-
 
 // Update Product Api
 exports.updateProduct = async (req, res) => {

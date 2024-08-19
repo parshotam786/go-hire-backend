@@ -36,7 +36,7 @@ const DeliverNoteSchema = new mongoose.Schema(
     refrence: { type: String },
     bookDate: {
       type: Date,
-      default: Date.now,
+      default: Date.now(),
     },
   },
   { timestamps: true }

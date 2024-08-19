@@ -36,7 +36,7 @@ const ReturnNoteSchema = new mongoose.Schema(
     refrence: { type: String },
     returnDate: {
       type: Date,
-      default: Date.now,
+      required: true,
     },
   },
   { timestamps: true }

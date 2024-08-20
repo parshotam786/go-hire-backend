@@ -2,7 +2,7 @@ const { Schema } = require("mongoose");
 
 const itemsSchema = new Schema(
   {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    product: { type: Schema.Types.ObjectId, ref: "Product" },
     quantity: { type: Number, default: 1 },
     rate: { type: String },
     price: { type: Number },
@@ -15,4 +15,4 @@ const itemsSchema = new Schema(
   { timestamps: true }
 );
 
-export default itemsSchema;
+module.exports = itemsSchema;

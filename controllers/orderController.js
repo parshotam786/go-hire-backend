@@ -7,6 +7,8 @@ const Document = require("../models/documentNumber");
 const { errorResponse, successResponse } = require("../utiles/responses");
 const DeliverNote = require("../models/deliveryNote");
 const ReturnNote = require("../models/returnNote");
+const QuickBooks = require("node-quickbooks");
+const Quickbook = require("../models/quickbookAuth");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
@@ -719,6 +721,60 @@ const generateOrderNote = async (req, res) => {
   }
 };
 
+const invoice = {
+  Line: [
+    {
+      Description: "Custom website development services", // Product description
+      Amount: 1500.0, // Total line amount (quantity * unit price)
+      DetailType: "SalesItemLineDetail",
+      SalesItemLineDetail: {
+        ItemRef: {
+          value: "1", // Product/Service ID in QuickBooks
+          name: "sumesh	", // Product name
+        },
+        UnitPrice: 1500.0, // Price per unit
+        Qty: 1, // Quantity
+        TaxCodeRef: {
+          value: "TAX", // Tax code (if applicable)
+        },
+      },
+    },
+    {
+      Description: "Monthly hosting fee", // Another product description
+      Amount: 100.0, // Total line amount (quantity * unit price)
+      DetailType: "SalesItemLineDetail",
+      SalesItemLineDetail: {
+        ItemRef: {
+          value: "2", // Another Product/Service ID
+          name: "Hosting Service", // Product name
+        },
+        UnitPrice: 100.0, // Price per unit
+        Qty: 1, // Quantity
+        TaxCodeRef: {
+          value: "TAX", // Tax code (if applicable)
+        },
+      },
+    },
+  ],
+  CustomerRef: {
+    value: "1",
+    name: "Fatima Steele	",
+  },
+  BillEmail: {
+    Address: "sumesh@example.com", // Customer's email
+  },
+  BillAddr: {
+    Line1: "123 Main St",
+    City: "Anytown",
+    CountrySubDivisionCode: "CA",
+    PostalCode: "94105",
+  },
+  SalesTermRef: {
+    value: "1", // Payment terms (e.g., Net 30)
+  },
+  DueDate: "2024-09-01", // Invoice due date
+  TotalAmt: 1600.0, // Total invoice amount
+};
 const handleOrderBooking = async (req, res, type) => {
   const { orderId, productIds = [], reference, bookDate } = req.body;
   const vendorId = req.user._id;
@@ -748,7 +804,26 @@ const handleOrderBooking = async (req, res, type) => {
       ...prd.toObject(),
       status: productStatus,
     }));
+    const existingRecord = await Quickbook.findOne({ vendorId });
+    const qbo = new QuickBooks(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      existingRecord.accessToken,
+      false, // No token secret for OAuth2
+      existingRecord.realmId,
+      true, // use sandbox
+      true, // debug mode
+      existingRecord.refreshToken,
+      "2.0" // OAuth version
+    );
 
+    qbo.createInvoice(invoice, function (err, invoice) {
+      if (err) {
+        console.error("Error creating invoice:", err);
+      } else {
+        console.log("Invoice created successfully:", invoice);
+      }
+    });
     const note = new NoteModel({
       customerId: order.customerId,
       orderId: order._id,

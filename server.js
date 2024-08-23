@@ -1,4 +1,5 @@
 const express = require("express");
+const session = require("express-session");
 const dotenv = require("dotenv").config();
 const connectDB = require("./config/db"); // Adjust the path as necessary
 var cors = require("cors");
@@ -11,11 +12,20 @@ const routes = [
   "authRoutes",
   "productRoutes",
   "categoriesRoutes",
+  "quickbookRoutes",
   "reviewRoutes",
 ];
 const app = express();
 app.use(cors());
 connectDB();
+app.use(
+  session({
+    secret: "gohire22",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // Set to true if using HTTPS
+  })
+);
 app.use(express.json());
 app.use("/images", express.static(path.join(__dirname, "images"))); // Serve images statically
 app.use(express.urlencoded({ extended: false }));

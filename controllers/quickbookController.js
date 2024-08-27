@@ -53,7 +53,9 @@ const quickbookCallback = async (req, res) => {
       });
     }
 
-    res.redirect("http://localhost:3000/system-setup/integrations/quickbook");
+    res.redirect(
+      "https://gohire-frontend-eqqmb.ondigitalocean.app/system-setup/integrations/quickbook"
+    );
     // res.status(200).json({
     //   success: true,
     //   data: authResponse,

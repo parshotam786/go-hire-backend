@@ -17,6 +17,7 @@ const orderSchema = new mongoose.Schema(
       ref: "Customers",
     },
     account: { type: String, default: "" },
+    cunstomerQuickbookId: { type: String, default: "" },
     billingPlaceName: { type: String, default: "" },
     address1: { type: String, default: "" },
     address2: { type: String, default: "" },

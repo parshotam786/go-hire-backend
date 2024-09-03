@@ -4,6 +4,9 @@ const Customer = require("../models/customers");
 const Order = require("../models/orderModel");
 const { errorResponse, successResponse } = require("../utiles/responses");
 const { default: mongoose } = require("mongoose");
+const QuickBooks = require("node-quickbooks");
+const { getNextSequence } = require("../services/counterService");
+const Quickbook = require("../models/quickbookAuth");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -49,8 +52,23 @@ const addCustomer = async (req, res) => {
     } = req.body;
 
     const thumbnail = req.file ? req.file.path : "images/default-image.png";
+    const customerID = await getNextSequence("customer");
+    const existingRecord = await Quickbook.findOne({ vendorId });
+    // Set up QuickBooks instance
+    const qbo = new QuickBooks(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      existingRecord.accessToken,
+      false, // No token secret for OAuth2
+      existingRecord.realmId,
+      true, // Use sandbox
+      true, // Debug mode
+      existingRecord.refreshToken,
+      "2.0" // OAuth version
+    );
 
     const customer = new Customer({
+      customerID: +customerID - 65,
       name,
       number,
       owner,
@@ -76,6 +94,40 @@ const addCustomer = async (req, res) => {
       invoiceRunCode,
       paymentTerm,
       thumbnail,
+    });
+
+    // Define customer data
+    const customerData = {
+      DisplayName: name,
+      GivenName: name,
+      PrimaryEmailAddr: {
+        Address: email,
+      },
+      // Add custom field for Customer ID
+      CustomField: [
+        {
+          DefinitionId: customerID,
+          Name: customerID,
+          Type: "StringType",
+          StringValue: customerID.toString(),
+        },
+      ],
+      // Add Billing Address
+      BillAddr: {
+        Line1: addressLine1,
+        City: city,
+        CountrySubDivisionCode: "PK",
+        PostalCode: postCode,
+        Country: country,
+      },
+    };
+
+    qbo.createCustomer(customerData, (err, customer) => {
+      if (err) {
+        console.error("Error creating customer:", err);
+      } else {
+        console.log("Customer created successfully:", customer);
+      }
     });
 
     await customer.save();

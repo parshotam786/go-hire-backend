@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const Invoice = require("../models/invoiceModel");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+
 const Document = require("../models/documentNumber");
 
 const { errorResponse, successResponse } = require("../utiles/responses");
@@ -9,6 +10,8 @@ const DeliverNote = require("../models/deliveryNote");
 const ReturnNote = require("../models/returnNote");
 const QuickBooks = require("node-quickbooks");
 const Quickbook = require("../models/quickbookAuth");
+const Vender = require("../models/venderModel");
+const venderModel = require("../models/venderModel");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
@@ -712,63 +715,73 @@ const generateOrderNote = async (req, res) => {
     });
 
     deliveryData.products = mergedProducts;
+    const vender = await venderModel.findById(vendorId);
 
-    const invoice = {
-      Line: deliveryData.products.map((item) => ({
-        Description: item.productName,
-        Amount: item.price * item.quantity,
-        DetailType: "SalesItemLineDetail",
-        SalesItemLineDetail: {
-          UnitPrice: item.price,
-          Qty: item.quantity,
+    const isQuickBookAccountExist = vender.isQuickBook;
+
+    if (isQuickBookAccountExist) {
+      const invoice = {
+        Line: deliveryData.products.map((item) => ({
+          Description: item.productName,
+          Amount: item.price * item.quantity,
+          DetailType: "SalesItemLineDetail",
+          SalesItemLineDetail: {
+            UnitPrice: item.price,
+            Qty: item.quantity,
+          },
+        })),
+        CustomerRef: {
+          value: `${deliveryData.customerDetails.customerID}`,
+          name: deliveryData.customerDetails.name,
         },
-      })),
-      CustomerRef: {
-        value: `${deliveryData.customerDetails.customerID}`,
-        name: deliveryData.customerDetails.name,
-      },
-      BillEmail: {
-        Address: deliveryData.customerDetails.email, // Customer's email
-      },
-      BillAddr: {
-        Line1: deliveryData.customerDetails.addressLine1,
-        City: deliveryData.customerDetails.city,
-        PostalCode: deliveryData.customerDetails.postCode,
-      },
-      SalesTermRef: {
-        value: "1", // Payment terms (e.g., Net 30)
-      },
-      DueDate: "2024-09-01", // Invoice due date
-      TotalAmt: deliveryData.products.reduce(
-        (total, item) => total + item.price * item.quantity, // Sum up all dynamically calculated amounts
-        0
-      ),
-    };
-    const existingRecord = await Quickbook.findOne({ vendorId });
-    const qbo = new QuickBooks(
-      process.env.CLIENT_ID,
-      process.env.CLIENT_SECRET,
-      existingRecord.accessToken,
-      false, // No token secret for OAuth2
-      existingRecord.realmId,
-      true, // use sandbox
-      true, // debug mode
-      existingRecord.refreshToken,
-      "2.0" // OAuth version
-    );
+        BillEmail: {
+          Address: deliveryData.customerDetails.email, // Customer's email
+        },
+        BillAddr: {
+          Line1: deliveryData.customerDetails.addressLine1,
+          City: deliveryData.customerDetails.city,
+          PostalCode: deliveryData.customerDetails.postCode,
+        },
+        SalesTermRef: {
+          value: "1", // Payment terms (e.g., Net 30)
+        },
+        DueDate: "2024-09-01", // Invoice due date
+        TotalAmt: deliveryData.products.reduce(
+          (total, item) => total + item.price * item.quantity, // Sum up all dynamically calculated amounts
+          0
+        ),
+      };
+      const existingRecord = await Quickbook.findOne({ vendorId });
+      const qbo = new QuickBooks(
+        process.env.CLIENT_ID,
+        process.env.CLIENT_SECRET,
+        existingRecord.accessToken,
+        false, // No token secret for OAuth2
+        existingRecord.realmId,
+        true, // use sandbox
+        true, // debug mode
+        existingRecord.refreshToken,
+        "2.0" // OAuth version
+      );
 
-    qbo.createInvoice(invoice, function (err, invoice) {
-      if (err) {
-        console.error("Error creating invoice:", err);
-      } else {
-        console.log("Invoice created successfully:", invoice);
-      }
-    });
-
-    return successResponse(res, {
-      data: deliveryData,
-      message: "Invoice fetched successfully",
-    });
+      qbo.createInvoice(invoice, function (err, invoice) {
+        if (err) {
+          return res.send({
+            message: "AUTHENTICATION",
+          });
+        } else {
+          return successResponse(res, {
+            data: deliveryData,
+            message: "Invoice fetched successfully",
+          });
+        }
+      });
+    } else {
+      return successResponse(res, {
+        data: deliveryData,
+        message: "Invoice fetched successfully",
+      });
+    }
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });
   }

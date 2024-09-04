@@ -1,5 +1,6 @@
 const OAuthClient = require("intuit-oauth");
 const Quickbook = require("../models/quickbookAuth");
+const venderModel = require("../models/venderModel");
 const oauthClient = new OAuthClient({
   clientId: process.env.CLIENT_ID,
   clientSecret: process.env.CLIENT_SECRET,
@@ -12,7 +13,8 @@ const qucikBookAuth = async (req, res) => {
     scope: [OAuthClient.scopes.Accounting, OAuthClient.scopes.OpenId],
     state: "Init",
   });
-  console.log({ authUri });
+  console.log("auth", { authUri });
+  req.session.redirectURL = req.query.redirctURL;
   req.session.userId = req.query.vendorId;
 
   res.redirect(`${authUri}`);
@@ -52,10 +54,18 @@ const quickbookCallback = async (req, res) => {
         refreshToken: refresh_token,
       });
     }
+    const vender = await venderModel.findById(vendorId);
+    if (!vender) {
+      return res.status(404).send({ error: "Vendor not found" });
+    }
+
+    vender.isQuickBook = true;
+    await vender.save();
 
     res.redirect(
       // "https://gohire-frontend-eqqmb.ondigitalocean.app/system-setup/integrations/quickbook"
-      "http://localhost:3000/system-setup/integrations/quickbook"
+      // "http://localhost:3000/system-setup/integrations/quickbook"
+      req.session.redirectURL
     );
     // res.status(200).json({
     //   success: true,
@@ -91,40 +101,24 @@ const disconnectQuickBook = async (req, res) => {
     // Find the existing record for the vendor
     const existingRecord = await Quickbook.findOne({ vendorId });
 
-    if (existingRecord) {
-      // If a record is found, make a call to revoke the access token
-      const response = await oauthClient.makeApiCall({
-        url: `https://sandbox-quickbooks.api.intuit.com/v3/company/${existingRecord.realmId}/companyinfo?minorversion=40`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${existingRecord.accessToken}`,
-        },
-        body: JSON.stringify({
-          token: existingRecord.accessToken,
-          token_type: "Bearer",
-        }),
-      });
-
-      // Check for a successful response
-      if (response.statusCode === 200) {
-        // Remove the QuickBooks record from the database
-        await Quickbook.deleteOne({ vendorId });
-
-        // Clear the session
-        delete req.session.userId;
-
-        res
-          .status(200)
-          .json({ message: "Successfully disconnected from QuickBooks" });
-      } else {
-        res
-          .status(response.statusCode)
-          .json({ message: "Failed to disconnect from QuickBooks" });
-      }
-    } else {
-      res.status(404).json({ message: "QuickBooks record not found" });
+    if (!existingRecord) {
+      return res.status(404).json({ message: "QuickBooks record not found" });
     }
+
+    await Quickbook.deleteOne({ vendorId });
+
+    const vender = await venderModel.findById(vendorId);
+    if (!vender) {
+      return res.status(404).send({ error: "Vendor not found" });
+    }
+
+    vender.isQuickBook = false;
+    await vender.save();
+
+    res.status(200).json({
+      message: "Successfully disconnected from QuickBooks",
+      status: true,
+    });
   } catch (error) {
     console.error("Error during disconnection:", error);
     res.status(500).send("Error disconnecting from QuickBooks");

@@ -102,6 +102,10 @@ const VenderSchema = new mongoose.Schema(
       type: String,
       default: "Seller",
     },
+    isQuickBook: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       default: "inactive",

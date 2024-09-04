@@ -16,6 +16,9 @@ const QuickbookAuth = new mongoose.Schema({
   refreshToken: {
     type: String,
   },
+  tokenExpiry: {
+    type: String,
+  },
 });
 
 module.exports = mongoose.model("Quickbook", QuickbookAuth);

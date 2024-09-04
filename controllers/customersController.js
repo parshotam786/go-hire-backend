@@ -7,6 +7,7 @@ const { default: mongoose } = require("mongoose");
 const QuickBooks = require("node-quickbooks");
 const { getNextSequence } = require("../services/counterService");
 const Quickbook = require("../models/quickbookAuth");
+const venderModel = require("../models/venderModel");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -52,23 +53,20 @@ const addCustomer = async (req, res) => {
     } = req.body;
 
     const thumbnail = req.file ? req.file.path : "images/default-image.png";
-    const customerID = await getNextSequence("customer");
-    const existingRecord = await Quickbook.findOne({ vendorId });
-    // Set up QuickBooks instance
-    const qbo = new QuickBooks(
-      process.env.CLIENT_ID,
-      process.env.CLIENT_SECRET,
-      existingRecord.accessToken,
-      false, // No token secret for OAuth2
-      existingRecord.realmId,
-      true, // Use sandbox
-      true, // Debug mode
-      existingRecord.refreshToken,
-      "2.0" // OAuth version
-    );
+    const vendor = await venderModel.findById(vendorId);
 
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    const isQuickBookAccountExist = vendor.isQuickBook;
+
+    const customerID = isQuickBookAccountExist
+      ? await getNextSequence("customer")
+      : null;
+    console.log({ customerID });
     const customer = new Customer({
-      customerID: +customerID - 65,
+      customerID: +customerID - 70,
       name,
       number,
       owner,
@@ -96,45 +94,100 @@ const addCustomer = async (req, res) => {
       thumbnail,
     });
 
-    // Define customer data
-    const customerData = {
-      DisplayName: name,
-      GivenName: name,
-      PrimaryEmailAddr: {
-        Address: email,
-      },
-      // Add custom field for Customer ID
-      CustomField: [
-        {
-          DefinitionId: customerID,
-          Name: customerID,
-          Type: "StringType",
-          StringValue: customerID.toString(),
-        },
-      ],
-      // Add Billing Address
-      BillAddr: {
-        Line1: addressLine1,
-        City: city,
-        CountrySubDivisionCode: "PK",
-        PostalCode: postCode,
-        Country: country,
-      },
-    };
-
-    qbo.createCustomer(customerData, (err, customer) => {
-      if (err) {
-        console.error("Error creating customer:", err);
-      } else {
-        console.log("Customer created successfully:", customer);
-      }
+    const customer2 = new Customer({
+      name,
+      number,
+      owner,
+      stop,
+      active,
+      cashCustomer,
+      canTakePayments,
+      addressLine1,
+      addressLine2,
+      city,
+      vendorId,
+      country,
+      postCode,
+      email,
+      fax,
+      telephone,
+      website,
+      type,
+      industry,
+      status,
+      taxClass,
+      parentAccount,
+      invoiceRunCode,
+      paymentTerm,
+      thumbnail,
     });
+    const customerDetail = isQuickBookAccountExist ? customer : customer2;
+    // Save customer to local database
+    await customerDetail.save();
 
-    await customer.save();
+    // Check if QuickBooks integration is required
+    if (isQuickBookAccountExist) {
+      const existingRecord = await Quickbook.findOne({ vendorId });
+      if (!existingRecord) {
+        return res
+          .status(404)
+          .json({ message: "QuickBooks account not found" });
+      }
+
+      // Set up QuickBooks instance
+      const qbo = new QuickBooks(
+        process.env.CLIENT_ID,
+        process.env.CLIENT_SECRET,
+        existingRecord.accessToken,
+        false, // No token secret for OAuth2
+        existingRecord.realmId,
+        true, // Use sandbox
+        true, // Debug mode
+        existingRecord.refreshToken,
+        "2.0" // OAuth version
+      );
+
+      // Define customer data for QuickBooks
+      const customerData = {
+        DisplayName: name,
+        GivenName: name,
+        PrimaryEmailAddr: {
+          Address: email,
+        },
+        CustomField: [
+          {
+            DefinitionId: customerID,
+            Name: customerID,
+            Type: "StringType",
+            StringValue: customerID.toString(),
+          },
+        ],
+        BillAddr: {
+          Line1: addressLine1,
+          City: city,
+          CountrySubDivisionCode: "PK",
+          PostalCode: postCode,
+          Country: country,
+        },
+      };
+
+      // Create customer in QuickBooks
+      qbo.createCustomer(customerData, (err, qbCustomer) => {
+        if (err) {
+          console.error("Error creating customer in QuickBooks:", err);
+        } else {
+          console.log(
+            "Customer created in QuickBooks successfully:",
+            qbCustomer
+          );
+        }
+      });
+    }
+
     res.status(201).json({
       message: "Customer created successfully",
       success: true,
-      customer,
+      customerDetail,
     });
   } catch (error) {
     console.error(error);

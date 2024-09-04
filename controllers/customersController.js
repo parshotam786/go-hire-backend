@@ -359,8 +359,34 @@ const getCustomerById = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "delivernotes",
+          localField: "_id",
+          foreignField: "customerId",
+          as: "delivernotes",
+        },
+      },
+      {
+        $lookup: {
+          from: "returnnotes",
+          localField: "_id",
+          foreignField: "customerId",
+          as: "returnnotes",
+        },
+      },
+      {
         $addFields: {
           numOfOrders: { $size: "$orders" },
+        },
+      },
+      {
+        $addFields: {
+          numOfRN: { $size: "$returnnotes" },
+        },
+      },
+      {
+        $addFields: {
+          numOfDN: { $size: "$delivernotes" },
         },
       },
     ]);

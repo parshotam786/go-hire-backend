@@ -155,11 +155,9 @@ const addCustomer = async (req, res) => {
           }
         }
       });
-    } else {
-      customer.customerID = "";
-      await customer.save();
     }
-
+    customer.customerID = "";
+    await customer.save();
     res.status(201).json({
       message: "Customer created successfully",
       success: true,

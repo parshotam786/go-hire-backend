@@ -90,7 +90,7 @@
         <div>
           <img
             id="brandLogo"
-            src="https://gohire-backend-nj2d7.ondigitalocean.app/{{brandLogo}}"
+            src="http://localhost:7000/{{brandLogo}}"
             alt="logo"
             style="max-width: 258px; max-height: 42px"
           />
@@ -123,26 +123,27 @@
           <span>{{customerEmail}}</span>
         </div>
       </div>
-      <div class="flex">
-        <span class="font-semibold text-sm mt-4">Order Details:</span>
-        <div style="margin-top: 10px">
-          <span class="text-gray">Order Number</span>
-          <span>{{orderNumber}}</span>
-        </div>
-        <div style="margin-top: 10px">
-          <span class="text-gray">Delivery Date:</span>
-          <span>{{deliveryDate}}</span>
-        </div>
-        <div style="margin-top: 10px">
-          <span class="text-gray">Order Date:</span>
-          <span>{{orderDate}}</span>
-        </div>
-        <div style="margin-top: 10px">
-          <span class="text-gray">Delivery Place Name:</span>
-          <span>{{deliveryPlaceName}}</span>
-        </div>
-      </div>
       <div class="flex border mt-5">
+        <div class="flex">
+          <span class="font-semibold text-sm mt-4">Order Details:</span>
+          <div style="margin-top: 10px">
+            <span class="text-gray">Order Number</span>
+            <span>{{orderNumber}}</span>
+          </div>
+          <div style="margin-top: 10px">
+            <span class="text-gray">Delivery Date:</span>
+            <span>{{deliveryDate}}</span>
+          </div>
+          <div style="margin-top: 10px">
+            <span class="text-gray">Order Date:</span>
+            <span>{{orderDate}}</span>
+          </div>
+          <div style="margin-top: 10px">
+            <span class="text-gray">Delivery Place Name:</span>
+            <span>{{deliveryPlaceName}}</span>
+          </div>
+        </div>
+
         <div style="flex: 2">
           <table class="table">
             <thead>

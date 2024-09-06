@@ -61,12 +61,8 @@ const addCustomer = async (req, res) => {
 
     const isQuickBookAccountExist = vendor.isQuickBook;
 
-    const customerID = isQuickBookAccountExist
-      ? await getNextSequence("customer")
-      : null;
-    console.log({ customerID });
     const customer = new Customer({
-      customerID: +customerID - 70,
+      customerID: "",
       name,
       number,
       owner,
@@ -94,36 +90,7 @@ const addCustomer = async (req, res) => {
       thumbnail,
     });
 
-    const customer2 = new Customer({
-      name,
-      number,
-      owner,
-      stop,
-      active,
-      cashCustomer,
-      canTakePayments,
-      addressLine1,
-      addressLine2,
-      city,
-      vendorId,
-      country,
-      postCode,
-      email,
-      fax,
-      telephone,
-      website,
-      type,
-      industry,
-      status,
-      taxClass,
-      parentAccount,
-      invoiceRunCode,
-      paymentTerm,
-      thumbnail,
-    });
-    const customerDetail = isQuickBookAccountExist ? customer : customer2;
     // Save customer to local database
-    await customerDetail.save();
 
     // Check if QuickBooks integration is required
     if (isQuickBookAccountExist) {
@@ -156,10 +123,10 @@ const addCustomer = async (req, res) => {
         },
         CustomField: [
           {
-            DefinitionId: customerID,
-            Name: customerID,
+            DefinitionId: 333,
+            Name: 333,
             Type: "StringType",
-            StringValue: customerID.toString(),
+            StringValue: "333",
           },
         ],
         BillAddr: {
@@ -172,22 +139,31 @@ const addCustomer = async (req, res) => {
       };
 
       // Create customer in QuickBooks
-      qbo.createCustomer(customerData, (err, qbCustomer) => {
+      qbo.createCustomer(customerData, async (err, qbCustomer) => {
         if (err) {
           console.error("Error creating customer in QuickBooks:", err);
         } else {
-          console.log(
-            "Customer created in QuickBooks successfully:",
-            qbCustomer
-          );
+          try {
+            customer.customerID = qbCustomer.Id;
+            await customer.save();
+            console.log(
+              "Customer created in QuickBooks successfully:",
+              qbCustomer.Id
+            );
+          } catch (saveError) {
+            console.error("Error saving customer data:", saveError);
+          }
         }
       });
+    } else {
+      customer.customerID = "";
+      await customer.save();
     }
 
     res.status(201).json({
       message: "Customer created successfully",
       success: true,
-      customerDetail,
+      customer,
     });
   } catch (error) {
     console.error(error);

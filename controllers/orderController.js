@@ -730,6 +730,7 @@ const generateOrderNote = async (req, res) => {
 
     if (
       isQuickBookAccountExist &&
+      deliveryData.orderDetails.cunstomerQuickbookId != null &&
       deliveryData.orderDetails.cunstomerQuickbookId !== ""
     ) {
       const invoice = {

@@ -12,6 +12,10 @@ const QuickBooks = require("node-quickbooks");
 const Quickbook = require("../models/quickbookAuth");
 const Vender = require("../models/venderModel");
 const venderModel = require("../models/venderModel");
+const htmlPdf = require("html-pdf");
+const fs = require("fs");
+const Handlebars = require("handlebars");
+const moment = require("moment/moment");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
@@ -718,8 +722,16 @@ const generateOrderNote = async (req, res) => {
     const vender = await venderModel.findById(vendorId);
 
     const isQuickBookAccountExist = vender.isQuickBook;
+    console.log(
+      "start",
+      deliveryData.orderDetails.cunstomerQuickbookId,
+      "ddddd"
+    );
 
-    if (isQuickBookAccountExist) {
+    if (
+      isQuickBookAccountExist &&
+      deliveryData.orderDetails.cunstomerQuickbookId !== ""
+    ) {
       const invoice = {
         Line: deliveryData.products.map((item) => ({
           Description: item.productName,
@@ -784,6 +796,121 @@ const generateOrderNote = async (req, res) => {
     }
   } catch (error) {
     return errorResponse(res, { message: error?.message || "Server Error!" });
+  }
+};
+const invoicePDF = async (req, res) => {
+  const { id, type } = req.body;
+  const vendorId = req.user._id;
+
+  // Validate inputs
+  if (!id || !type) {
+    return res.status(400).json({ message: "Invalid fields!" });
+  }
+
+  const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
+
+  try {
+    const [deliveryData] = await Model.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "orderDetails",
+        },
+      },
+      { $unwind: "$orderDetails" },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "orderDetails.customerId",
+          foreignField: "_id",
+          as: "customerDetails",
+        },
+      },
+      { $unwind: "$customerDetails" },
+    ]);
+
+    if (!deliveryData) {
+      return res.status(404).json({ message: "No data found" });
+    }
+
+    const populatedData = await Model.findById(id).populate({
+      path: "products.product",
+      select: "productName status",
+    });
+
+    const mergedProducts = deliveryData.products.map((product) => {
+      const populatedProduct = populatedData.products.find(
+        (p) => p.product._id.toString() === product.product.toString()
+      );
+
+      if (populatedProduct) {
+        return {
+          ...product,
+          productName: populatedProduct.product.productName,
+          type: populatedProduct.product.status,
+        };
+      }
+
+      return product;
+    });
+
+    deliveryData.products = mergedProducts;
+    const vender = await venderModel.findById(vendorId);
+
+    const brandLogo = vender.brandLogo;
+    const invoiceData = {
+      brandLogo: brandLogo, // Replace with actual logo path
+      invoiceDate: "2024-09-02",
+      invoiceNumber: deliveryData.deliveryNote,
+      deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
+      customerName: deliveryData.customerDetails.name,
+      customerAddress: deliveryData.customerDetails.addressLine1,
+      customerEmail: deliveryData.customerDetails.email,
+      orderType: deliveryData.deliveryNote,
+      orderNumber: deliveryData.orderDetails.orderId,
+      deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
+        "lll"
+      ),
+      orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
+      deliveryPlaceName: deliveryData.orderDetails.city,
+      products: deliveryData.products.map((item) => {
+        return {
+          productName: item.productName,
+          quantity: item.quantity,
+          type: item.type,
+          price: item.price,
+          total: item.quantity * item.price,
+        };
+      }),
+      totalPrice: deliveryData.products?.reduce(
+        (acc, item) => acc + item.price * item.quantity,
+        0
+      ),
+    };
+
+    const templateHtml = fs.readFileSync("invoice.html", "utf8");
+    const template = Handlebars.compile(templateHtml);
+    const html = template(invoiceData);
+
+    htmlPdf.create(html).toBuffer((err, pdfBuffer) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Server Error!" });
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="invoice.pdf"'
+      );
+      res.send(pdfBuffer);
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error!" });
   }
 };
 
@@ -903,4 +1030,5 @@ module.exports = {
   orderBookIn,
   orderBookOut,
   generateOrderNote,
+  invoicePDF,
 };

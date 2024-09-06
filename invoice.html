@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 11px;
+      }
+
+      .container {
+        padding: 32px;
+      }
+
+      .flex {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .mt-5 {
+        margin-top: 20px;
+      }
+
+      .border {
+        border: 2px solid #e4e4e4;
+        padding: 20px;
+        border-radius: 8px;
+      }
+
+      .font-semibold {
+        font-weight: 600;
+      }
+
+      .font-light {
+        font-weight: 300;
+      }
+
+      .text-gray {
+        color: #999999;
+      }
+
+      .text-sm {
+        font-size: 0.75rem;
+      }
+
+      .w-full {
+        width: 100%;
+      }
+
+      .w-60 {
+        width: 60%;
+      }
+
+      .w-30 {
+        width: 30%;
+      }
+
+      .gap-3 {
+        gap: 12px;
+      }
+
+      .mt-14 {
+        margin-top: 56px;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .table th,
+      .table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" id="invoiceDiv">
+      <div class="flex">
+        <div>
+          <img
+            id="brandLogo"
+            src="https://gohire-backend-nj2d7.ondigitalocean.app/{{brandLogo}}"
+            alt="logo"
+            style="max-width: 258px; max-height: 42px"
+          />
+        </div>
+      </div>
+      <div class="">
+        <div>
+          <span class="font-light text-gray">Invoice Date:</span>
+          {{invoiceDate}}
+        </div>
+        <div>
+          <span class="font-light text-gray">Invoice Number:</span>
+          {{invoiceNumber}}
+        </div>
+        <div>
+          <span class="font-semibold">Address:</span> {{deliveryAddress}}
+        </div>
+      </div>
+      <span class="font-semibold text-sm">Account Details:</span>
+      <div>
+        <div style="margin-top: 10px">
+          <span class="font-semibold text-sm">{{customerName}}</span>
+        </div>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Address:</span>
+          <span>{{customerAddress}}</span>
+        </div>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Email:</span>
+          <span>{{customerEmail}}</span>
+        </div>
+      </div>
+      <div class="flex">
+        <span class="font-semibold text-sm mt-4">Order Details:</span>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Order Number</span>
+          <span>{{orderNumber}}</span>
+        </div>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Delivery Date:</span>
+          <span>{{deliveryDate}}</span>
+        </div>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Order Date:</span>
+          <span>{{orderDate}}</span>
+        </div>
+        <div style="margin-top: 10px">
+          <span class="text-gray">Delivery Place Name:</span>
+          <span>{{deliveryPlaceName}}</span>
+        </div>
+      </div>
+      <div class="flex border mt-5">
+        <div style="flex: 2">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Product Description</th>
+                <th class="text-right">Quantity</th>
+                <th>Status</th>
+                <th>Price</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each products}}
+              <tr>
+                <td>{{productName}}</td>
+                <td class="text-right">{{quantity}}</td>
+                <td>{{type}}</td>
+                <td>${{price}}</td>
+                <td class="text-right">${{total}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="">
+        <div class="w-60 mt-14">
+          <span>Note ___________</span>
+        </div>
+      </div>
+      <div class="flex mt-5">
+        <div class="w-30">
+          <div class="flex justify-between">
+            <span class="font-semibold text-sm">Sub Total:</span>
+            <span class="font-semibold text-sm">${{totalPrice}}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="font-semibold text-sm">Amount Due (GBP):</span>
+            <span class="font-semibold text-sm">${{totalPrice}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

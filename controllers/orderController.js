@@ -865,11 +865,15 @@ const invoicePDF = async (req, res) => {
     const invoiceData = {
       brandLogo: brandLogo, // Replace with actual logo path
       invoiceDate: "2024-09-02",
-      invoiceNumber: deliveryData.deliveryNote,
+      invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
       customerName: deliveryData.customerDetails.name,
       customerAddress: deliveryData.customerDetails.addressLine1,
+      customerCity: deliveryData.customerDetails.city,
+      customerCountry: deliveryData.customerDetails.country,
+      customerPostCode: deliveryData.customerDetails.postCode,
       customerEmail: deliveryData.customerDetails.email,
+      orderId: deliveryData.orderDetails.orderId,
       orderType: deliveryData.deliveryNote,
       orderNumber: deliveryData.orderDetails.orderId,
       deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(

@@ -142,6 +142,10 @@ const addCustomer = async (req, res) => {
       qbo.createCustomer(customerData, async (err, qbCustomer) => {
         if (err) {
           console.error("Error creating customer in QuickBooks:", err);
+          return res.status(500).json({
+            message: "Error creating customer in QuickBooks",
+            error: err,
+          });
         } else {
           try {
             customer.customerID = qbCustomer.Id;
@@ -150,13 +154,26 @@ const addCustomer = async (req, res) => {
               "Customer created in QuickBooks successfully:",
               qbCustomer.Id
             );
+            return res.status(201).json({
+              message: "Customer created successfully in QuickBooks",
+              success: true,
+              customer,
+            });
           } catch (saveError) {
             console.error("Error saving customer data:", saveError);
+            return res.status(500).json({
+              message: "Error saving customer data",
+              error: saveError,
+            });
           }
         }
       });
+
+      // Stop further processing if QuickBooks error occurs
+      return; // Ensure this prevents further execution
     }
-    customer.customerID = "";
+
+    // Save customer to local database without QuickBooks integration
     await customer.save();
     res.status(201).json({
       message: "Customer created successfully",

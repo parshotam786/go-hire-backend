@@ -889,20 +889,29 @@ const invoicePDF = async (req, res) => {
     const invoiceHTML = require("../invoice.html");
     const templateHtml = fs.readFile(invoiceHTML, "utf8");
 
-    console.log(templateHtml, "templateHtml");
-    const template = Handlebars.compile(templateHtml);
-    const html = template(invoiceData);
-    htmlPdf.create(html).toBuffer((err, pdfBuffer) => {
+    const filePath = path.join(__dirname, "..", "invoice.html");
+    // Read the HTML file asynchronously
+    fs.readFile(filePath, "utf8", (err, data) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Server Error!" });
+        console.error("Error reading file:", err);
+        return;
       }
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        'attachment; filename="invoice.pdf"'
-      );
-      res.send(pdfBuffer);
+      const templateHtml = data;
+      console.log(templateHtml, "templateHtml");
+      const template = Handlebars.compile(templateHtml);
+      const html = template(invoiceData);
+      htmlPdf.create(html).toBuffer((err, pdfBuffer) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ message: "Server Error!" });
+        }
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="invoice.pdf"'
+        );
+        res.send(pdfBuffer);
+      });
     });
   } catch (error) {
     console.error(error);

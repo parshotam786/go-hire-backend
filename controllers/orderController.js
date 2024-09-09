@@ -886,10 +886,9 @@ const invoicePDF = async (req, res) => {
         0
       ),
     };
-    const templateHtml = fs.readFileSync(
-      path.join(__dirname?.replace("/controllers", ""), "invoice.html"),
-      "utf8"
-    );
+    const invoiceHTML = require("../invoice.html");
+    const templateHtml = fs.readFile(invoiceHTML, "utf8");
+
     console.log(templateHtml, "templateHtml");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);

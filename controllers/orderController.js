@@ -16,6 +16,7 @@ const htmlPdf = require("html-pdf");
 const fs = require("fs");
 const Handlebars = require("handlebars");
 const moment = require("moment/moment");
+const path = require("path");
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
@@ -802,14 +803,11 @@ const generateOrderNote = async (req, res) => {
 const invoicePDF = async (req, res) => {
   const { id, type } = req.body;
   const vendorId = req.user._id;
-
   // Validate inputs
   if (!id || !type) {
     return res.status(400).json({ message: "Invalid fields!" });
   }
-
   const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
-
   try {
     const [deliveryData] = await Model.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
@@ -832,21 +830,17 @@ const invoicePDF = async (req, res) => {
       },
       { $unwind: "$customerDetails" },
     ]);
-
     if (!deliveryData) {
       return res.status(404).json({ message: "No data found" });
     }
-
     const populatedData = await Model.findById(id).populate({
       path: "products.product",
       select: "productName status",
     });
-
     const mergedProducts = deliveryData.products.map((product) => {
       const populatedProduct = populatedData.products.find(
         (p) => p.product._id.toString() === product.product.toString()
       );
-
       if (populatedProduct) {
         return {
           ...product,
@@ -854,13 +848,10 @@ const invoicePDF = async (req, res) => {
           type: populatedProduct.product.status,
         };
       }
-
       return product;
     });
-
     deliveryData.products = mergedProducts;
     const vender = await venderModel.findById(vendorId);
-
     const brandLogo = vender.brandLogo;
     const invoiceData = {
       brandLogo: brandLogo, // Replace with actual logo path
@@ -895,17 +886,18 @@ const invoicePDF = async (req, res) => {
         0
       ),
     };
-
-    const templateHtml = fs.readFileSync("invoice.html", "utf8");
+    const templateHtml = fs.readFileSync(
+      path.join(__dirname?.replace("/controllers", ""), "invoice.html"),
+      "utf8"
+    );
+    console.log(templateHtml, "templateHtml");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);
-
     htmlPdf.create(html).toBuffer((err, pdfBuffer) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ message: "Server Error!" });
       }
-
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",

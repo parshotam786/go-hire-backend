@@ -921,6 +921,7 @@ const generateOrderNote = async (req, res) => {
 // };
 const invoicePDF = async (req, res) => {
   const { id, type } = req.body;
+  const vendorId = req.user._id;
 
   // Validate inputs
   if (!id || !type) {

@@ -919,10 +919,8 @@ const generateOrderNote = async (req, res) => {
 //     res.status(500).json({ message: "Server Error!" });
 //   }
 // };
-
 const invoicePDF = async (req, res) => {
   const { id, type } = req.body;
-  const vendorId = req.user._id;
 
   // Validate inputs
   if (!id || !type) {
@@ -1020,16 +1018,15 @@ const invoicePDF = async (req, res) => {
     const templateHtml = fs.readFileSync("invoice.html", "utf8");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);
+    console.log(html);
 
-    // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({ format: "A4" });
-
+    await page.setContent(html);
+    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
     await browser.close();
 
+    // Set headers and send PDF as response
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="invoice.pdf"');
     res.send(pdfBuffer);

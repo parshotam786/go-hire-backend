@@ -906,7 +906,15 @@ const invoicePDF = async (req, res) => {
     const html = template(invoiceData);
 
     // Launch Puppeteer and generate PDF
-    const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
+    const browser = await puppeteer.launch({
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--remote-debugging-port=9222",
+      ],
+    });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 

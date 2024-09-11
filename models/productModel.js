@@ -23,6 +23,9 @@ const productSchema = new mongoose.Schema(
     },
     salePrice: { type: String },
     quantity: { type: Number, required: true },
+    taxClass: {
+      type: String,
+    },
     minHireTime: { type: String },
     range: { type: String },
     vat: { type: String },

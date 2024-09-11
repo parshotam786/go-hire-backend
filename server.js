@@ -42,6 +42,11 @@ routes.forEach((route) => {
 app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/order", authenticateUser, require("./routes/orderRoutes"));
 app.use("/api/document", authenticateUser, require("./routes/documentRoutes"));
+app.use(
+  "/api/tax-classes",
+  authenticateUser,
+  require("./routes/taxClassesRoutes")
+);
 
 // Middleware to parse JSON bodies
 

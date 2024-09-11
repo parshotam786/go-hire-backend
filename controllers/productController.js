@@ -8,6 +8,7 @@ exports.addProduct = async (req, res) => {
       companyProductName,
       productDescription,
       category,
+      taxClass,
       status,
       rentPrice,
       rentDuration,
@@ -43,6 +44,9 @@ exports.addProduct = async (req, res) => {
     if (!category) {
       return res.status(400).json({ message: "Category is required." });
     }
+    if (!taxClass) {
+      return res.status(400).json({ message: "Tax Class is required." });
+    }
     if (!subCategory) {
       return res.status(400).json({ message: "Sub category is required." });
     }
@@ -62,6 +66,7 @@ exports.addProduct = async (req, res) => {
       companyProductName,
       productDescription,
       category,
+      taxClass,
       status,
       rentPrice,
       rentDuration,
@@ -107,6 +112,7 @@ exports.updateProduct = async (req, res) => {
       productDescription,
       category,
       status,
+      taxClass,
       rentPrice,
       rentDuration,
       salePrice,
@@ -138,6 +144,7 @@ exports.updateProduct = async (req, res) => {
       productDescription,
       category,
       status,
+      taxClass,
       rentPrice,
       rentDuration,
       salePrice,
@@ -233,6 +240,7 @@ exports.getProductsByVendorId = async (req, res) => {
       productName: product.productName,
       category: product.category,
       sub_category: product.subCategory,
+      taxClass: product.taxClass,
       status: product.status,
       rentPrice: product.rentPrice,
       rentDuration: product.rentDuration,
@@ -359,6 +367,7 @@ exports.getProductsBySearch = async (req, res) => {
       quantity: product.quantity,
       range: product.range,
       minHireTime: product.minHireTime,
+      taxClass: product.taxClass,
       vat: product.vat,
       rate: product.rate,
       lenghtUnit: product.lenghtUnit,

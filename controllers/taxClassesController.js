@@ -88,6 +88,73 @@ const getAllTaxList = async (req, res) => {
   }
 };
 
+const getAlTaxClasslProducts = async (req, res) => {
+  try {
+    const { _id: vendorId } = req.user;
+
+    // Check for required fields
+    if (!vendorId) {
+      return res.status(400).json({ message: "Vendor ID is required." });
+    }
+
+    const filter = {
+      vendorId,
+      type: "product",
+      defaultStatus: true,
+    };
+
+    // Fetch all tax classes with the filter
+    const taxClasses = await taxClassesModel
+      .find(filter)
+      .sort({ createdAt: -1 }); // Sort by created date in descending order
+
+    // Count total records for the filter
+    const totalRecords = await taxClassesModel.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: taxClasses,
+      totalRecords,
+    });
+  } catch (error) {
+    console.error("Error retrieving tax classes:", error);
+    res.status(500).json({ message: "Error retrieving tax classes", error });
+  }
+};
+const getAlTaxClasslAccount = async (req, res) => {
+  try {
+    const { _id: vendorId } = req.user;
+
+    // Check for required fields
+    if (!vendorId) {
+      return res.status(400).json({ message: "Vendor ID is required." });
+    }
+
+    const filter = {
+      vendorId,
+      type: "account",
+      defaultStatus: true,
+    };
+
+    // Fetch all tax classes with the filter
+    const taxClasses = await taxClassesModel
+      .find(filter)
+      .sort({ createdAt: -1 }); // Sort by created date in descending order
+
+    // Count total records for the filter
+    const totalRecords = await taxClassesModel.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: taxClasses,
+      totalRecords,
+    });
+  } catch (error) {
+    console.error("Error retrieving tax classes:", error);
+    res.status(500).json({ message: "Error retrieving tax classes", error });
+  }
+};
+
 const updateTaxClass = async (req, res) => {
   try {
     const { _id: vendorId } = req.user;
@@ -179,4 +246,6 @@ module.exports = {
   getTaxClass,
   updateTaxClass,
   deleteTaxClass,
+  getAlTaxClasslProducts,
+  getAlTaxClasslAccount,
 };

@@ -219,6 +219,46 @@ const VenderRegister = async (req, res) => {
   }
 };
 
+// verify email
+const emailVerifyController = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if email is provided
+    if (!email) {
+      return res
+        .status(400)
+        .send({ success: false, message: "Email is required" });
+    }
+
+    // Validate email format using regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .send({ success: false, message: "Invalid email format" });
+    }
+
+    // Look for an existing vendor by email
+    const existingVendor = await Vender.findOne({ email });
+
+    // If an existing vendor is found, return a response indicating the email already exists
+    if (existingVendor) {
+      return res
+        .status(409)
+        .send({ success: false, message: "Email already exists" });
+    }
+
+    // If no vendor is found, return a response indicating the email is available
+    return res
+      .status(200)
+      .send({ success: true, message: "Email is available" });
+  } catch (err) {
+    // Handle any server errors
+    return res.status(500).send({ success: false, message: err.message });
+  }
+};
+
 // Vender login
 const VenderLogin = async (req, res) => {
   try {
@@ -570,7 +610,7 @@ const getVendorDashboardStats = async (req, res) => {
       },
       {
         $lookup: {
-          from: "invoices",
+          from: "returnnotes",
           localField: "_id",
           foreignField: "vendorId",
           as: "invoices",
@@ -612,6 +652,7 @@ module.exports = {
   AdminLogin,
   AdminRegister,
   VenderRegister,
+  emailVerifyController,
   VenderLogin,
   updateVenderStatus,
   AdminDirectory,

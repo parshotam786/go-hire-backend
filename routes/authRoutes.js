@@ -17,6 +17,7 @@ const {
   getVendorDashboardStats,
   updateBrandLogo,
   getBrandLogo,
+  emailVerifyController,
 } = require("../controllers/authController");
 const {
   invoiceAddData,
@@ -61,6 +62,7 @@ router.post("/admin-register", AdminRegister);
 router.post("/admin-login", AdminLogin);
 router.post("/vender-register", VenderRegister);
 router.post("/vender-login", VenderLogin);
+router.post("/vender-verify", emailVerifyController);
 router.post("/vender/status", updateVenderStatus);
 router.get("/admin-directory", AdminDirectory);
 router.get("/vender/directory", VenderDirectory);

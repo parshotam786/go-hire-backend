@@ -56,27 +56,27 @@ const VenderSchema = new mongoose.Schema(
     },
     bankName: {
       type: String,
-      required: true,
+      default: "",
     },
     bankAddress: {
       type: String,
-      required: true,
+      default: "",
     },
     accountName: {
       type: String,
-      required: true,
+      default: "",
     },
     accountNumber: {
       type: String,
-      required: true,
+      default: "",
     },
     swiftCode: {
       type: String,
-      required: true,
+      default: "",
     },
     iban: {
       type: String,
-      required: true,
+      default: "",
     },
     declaration: {
       type: String,
@@ -102,6 +102,7 @@ const VenderSchema = new mongoose.Schema(
       type: String,
       default: "Seller",
     },
+
     isQuickBook: {
       type: Boolean,
       default: false,

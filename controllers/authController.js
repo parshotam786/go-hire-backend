@@ -73,12 +73,12 @@ const VenderRegister = async (req, res) => {
       state,
       zip,
       country,
-      bankName,
-      bankAddress,
-      accountName,
-      accountNumber,
-      swiftCode,
-      iban,
+      // bankName,
+      // bankAddress,
+      // accountName,
+      // accountNumber,
+      // swiftCode,
+      // iban,
       declaration,
       signature,
       name,
@@ -102,12 +102,12 @@ const VenderRegister = async (req, res) => {
       state,
       zip,
       country,
-      bankName,
-      bankAddress,
-      accountName,
-      accountNumber,
-      swiftCode,
-      iban,
+      // bankName,
+      // bankAddress,
+      // accountName,
+      // accountNumber,
+      // swiftCode,
+      // iban,
       declaration,
       signature,
       name,
@@ -231,7 +231,6 @@ const emailVerifyController = async (req, res) => {
         .send({ success: false, message: "Email is required" });
     }
 
-    // Validate email format using regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res
@@ -239,22 +238,18 @@ const emailVerifyController = async (req, res) => {
         .send({ success: false, message: "Invalid email format" });
     }
 
-    // Look for an existing vendor by email
     const existingVendor = await Vender.findOne({ email });
 
-    // If an existing vendor is found, return a response indicating the email already exists
     if (existingVendor) {
       return res
         .status(409)
         .send({ success: false, message: "Email already exists" });
     }
 
-    // If no vendor is found, return a response indicating the email is available
     return res
       .status(200)
       .send({ success: true, message: "Email is available" });
   } catch (err) {
-    // Handle any server errors
     return res.status(500).send({ success: false, message: err.message });
   }
 };
@@ -472,6 +467,7 @@ const updateUserdata = async (req, res) => {
       state: req.body.state,
       email: req.body.email,
       primaryPhone: req.body.primaryPhone,
+      bankName: req.body.bankName,
       country: req.body.country,
       accountName: req.body.accountName,
       accountNumber: req.body.accountNumber,

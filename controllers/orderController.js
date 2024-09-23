@@ -11,6 +11,8 @@ const ReturnNote = require("../models/returnNote");
 const QuickBooks = require("node-quickbooks");
 const Quickbook = require("../models/quickbookAuth");
 const Vender = require("../models/venderModel");
+const nodemailer = require("nodemailer"); // Require nodemailer
+
 const venderModel = require("../models/venderModel");
 const htmlPdf = require("html-pdf");
 const puppeteer = require("puppeteer");
@@ -1287,6 +1289,257 @@ const handleOrderBooking = async (req, res, type) => {
 const orderBookIn = (req, res) => handleOrderBooking(req, res, "bookIn");
 const orderBookOut = (req, res) => handleOrderBooking(req, res, "bookOut");
 
+// const invoiceByVendorId = async (req, res) => {
+//   try {
+//     const vendorId = req.user._id;
+
+//     // Find all deliver notes for the given vendor ID
+//     const deliverNotes = await DeliverNote.find({ vendorId })
+//       .populate("customerId")
+//       .populate("orderId");
+
+//     if (!deliverNotes || deliverNotes.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No deliver notes found for this vendor" });
+//     }
+//     const vendor = await venderModel.findById(vendorId);
+//     // Construct the invoice object
+//     const invoiceData = deliverNotes.map((note) => ({
+//       id: note._id,
+//       brandLogo: vendor.brandLogo,
+//       orderId: note.orderId ? note.orderId.orderId : null,
+//       chargingStartDate: note.orderId ? note.orderId.chargingStartDate : null,
+//       orderDate: note.orderId ? note.orderId.orderDate : null,
+//       deliveryDate: note.orderId
+//         ? moment(note.orderId.deliveryDate).format("lll")
+//         : null,
+//       deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
+//       customerName: note.customerId ? note.customerId.name : null,
+//       customerAddress: note.customerId ? note.customerId.addressLine1 : null,
+//       customerCity: note.customerId ? note.customerId.city : null,
+//       customerCountry: note.customerId ? note.customerId.country : null,
+//       customerPostCode: note.customerId ? note.customerId.postCode : null,
+//       customerEmail: note.customerId ? note.customerId.email : null,
+//       products: note.products,
+//       totalPrice: note.products.reduce(
+//         (acc, item) => acc + item.price * item.quantity,
+//         0
+//       ),
+//       reference: note.reference,
+//       bookDate: note.bookDate,
+//       createdAt: note.createdAt,
+//       updatedAt: note.updatedAt,
+//     }));
+
+//     // Send the response
+//     res.status(200).json(invoiceData);
+//   } catch (error) {
+//     console.error("Error fetching invoices by vendor ID:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+// Function to send email
+
+// const invoiceByVendorId = async (req, res) => {
+//   try {
+//     const vendorId = req.user._id;
+//     console.log("start");
+
+//     const deliverNotes = await DeliverNote.find({ vendorId })
+//       .populate("customerId")
+//       .populate("orderId");
+
+//     if (!deliverNotes || deliverNotes.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No deliver notes found for this vendor" });
+//     }
+
+//     const vendor = await venderModel.findById(vendorId);
+
+//     const invoiceData = deliverNotes.map((note) => ({
+//       id: note._id,
+//       brandLogo: vendor.brandLogo,
+//       orderId: note.orderId ? note.orderId.orderId : null,
+//       chargingStartDate: note.orderId ? note.orderId.chargingStartDate : null,
+//       orderDate: note.orderId ? note.orderId.orderDate : null,
+//       deliveryDate: note.orderId
+//         ? moment(note.orderId.deliveryDate).format("lll")
+//         : null,
+//       deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
+//       customerName: note.customerId ? note.customerId.name : null,
+//       customerEmail: note.customerId ? note.customerId.email : null,
+//       products: note.products,
+//       totalPrice: note.products.reduce(
+//         (acc, item) => acc + item.price * item.quantity,
+//         0
+//       ),
+//       reference: note.reference,
+//       bookDate: note.bookDate,
+//       createdAt: note.createdAt,
+//       updatedAt: note.updatedAt,
+//     }));
+
+//     // Create a transporter (this can be outside the loop if using a single SMTP connection)
+//     // Looking to send emails in production? Check out our Email API/SMTP product!
+//     var transporter = nodemailer.createTransport({
+//       service: "gmail",
+//       auth: {
+//         user: "parshotamrughanii@gmail.com", // your Gmail account
+//         pass: "walz hskf huzy yljv", // App Password from step 1
+//       },
+//     });
+
+//     // Send emails concurrently
+//     await Promise.all(
+//       invoiceData.map(async (invoice) => {
+//         const customerEmail = invoice.customerEmail;
+//         if (customerEmail) {
+//           const mailOptions = {
+//             from: "parshotamrughanii@gmail.com",
+//             to: customerEmail, // Send to the specific customer email
+//             subject: "Invoice Details",
+//             text: `Dear ${invoice.customerName}, please find the invoice details:\nOrder ID: ${invoice.orderId}\nTotal Price: ${invoice.totalPrice}\nDelivery Date: ${invoice.deliveryDate}`,
+//           };
+
+//           // Send the email
+//           try {
+//             await transporter.sendMail(mailOptions);
+//             console.log(`Email sent to ${customerEmail}`);
+//           } catch (error) {
+//             console.error(`Error sending email to ${customerEmail}:`, error);
+//           }
+//         }
+//       })
+//     );
+
+//     res.status(200).json({
+//       message: "Invoices sent to all customers with valid email addresses",
+//       invoiceData,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching invoices by vendor ID:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+const invoiceByVendorId = async (req, res) => {
+  try {
+    const vendorId = req.user._id;
+    const deliverNotes = await DeliverNote.find({ vendorId })
+      .populate("customerId")
+      .populate("orderId");
+
+    if (!deliverNotes || deliverNotes.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No deliver notes found for this vendor" });
+    }
+
+    const vendor = await venderModel.findById(vendorId);
+
+    const invoiceData = deliverNotes.map((note) => ({
+      id: note._id,
+      brandLogo: vendor.brandLogo,
+      orderId: note.orderId ? note.orderId.orderId : null,
+      deliveryDate: note.orderId
+        ? moment(note.orderId.deliveryDate).format("lll")
+        : null,
+      deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
+      customerName: note.customerId ? note.customerId.name : null,
+      customerEmail: note.customerId ? note.customerId.email : null,
+      products: note.products,
+      totalPrice: note.products.reduce(
+        (acc, item) => acc + item.price * item.quantity,
+        0
+      ),
+    }));
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "parshotamrughanii@gmail.com",
+        pass: "walz hskf huzy yljv", // Use App Password for better security
+      },
+    });
+
+    await Promise.all(
+      invoiceData.map(async (invoice) => {
+        const customerEmail = invoice.customerEmail;
+        if (customerEmail) {
+          // Read and compile the Handlebars template
+
+          const templatePath = path.join(__dirname, "invoice.html");
+          const templateHtml = fs.readFileSync(templatePath, "utf8");
+          const template = Handlebars.compile(templateHtml);
+
+          // Create HTML content by passing data to the template
+          const htmlContent = template({
+            brandLogo: invoice.brandLogo,
+            invoiceDate: new Date().toLocaleDateString(),
+            invoiceNumber: invoice.id,
+            deliveryAddress: invoice.deliveryAddress,
+            customerName: invoice.customerName,
+            customerEmail: invoice.customerEmail,
+            orderId: invoice.orderId,
+            deliveryDate: invoice.deliveryDate,
+            products: invoice.products.map((product) => ({
+              productName: product.productName,
+              quantity: product.quantity,
+              type: product.type,
+              price: product.price,
+              total: (product.price * product.quantity).toFixed(2),
+            })),
+            totalPrice: invoice.totalPrice.toFixed(2),
+          });
+
+          const pdfBuffer = await createPdf(htmlContent);
+
+          const mailOptions = {
+            from: "parshotamrughanii@gmail.com",
+            to: customerEmail,
+            subject: "Invoice Details",
+            text: `Dear ${invoice.customerName}, please find the invoice details attached.`,
+            attachments: [
+              {
+                filename: `invoice_${invoice.id}.pdf`,
+                content: pdfBuffer,
+                contentType: "application/pdf",
+              },
+            ],
+          };
+
+          try {
+            await transporter.sendMail(mailOptions);
+            console.log(`Email sent to ${customerEmail}`);
+          } catch (error) {
+            console.error(`Error sending email to ${customerEmail}:`, error);
+          }
+        }
+      })
+    );
+
+    res.status(200).json({
+      message: "Invoices sent to all customers with valid email addresses",
+      invoiceData,
+    });
+  } catch (error) {
+    console.error("Error fetching invoices by vendor ID:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const createPdf = async (html) => {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "networkidle0" });
+  const pdfBuffer = await page.pdf({ format: "A4" });
+  await browser.close();
+  return pdfBuffer;
+};
+
 //exports
 module.exports = {
   getOrder,
@@ -1305,4 +1558,5 @@ module.exports = {
   orderBookOut,
   generateOrderNote,
   invoicePDF,
+  invoiceByVendorId,
 };

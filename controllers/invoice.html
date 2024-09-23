@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+    />
+
+    <title>Invoice</title>
+    <style>
+      body {
+        font-family: "Roboto", Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #333;
+      }
+      .container {
+        padding: 20px;
+      }
+      .header {
+        margin-bottom: 20px;
+        font-size: 10px;
+      }
+      .header img {
+        max-width: 258px;
+        height: auto;
+      }
+      .header table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .header th,
+      .header td {
+        padding: 5px;
+        text-align: left;
+      }
+      .header .date {
+        font-weight: normal;
+        color: #999;
+      }
+      .content {
+        border: 2px solid #e4e4e4;
+        border-radius: 5px;
+        font-size: 10px;
+      }
+      .content table {
+        font-size: 10px;
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .content th,
+      .content td {
+        padding: 8px;
+        text-align: left;
+      }
+      .content th {
+        background-color: orange;
+        color: black;
+      }
+      .footer {
+        display: table;
+        width: 100%;
+        font-size: 10px;
+        margin-top: 20px;
+      }
+      .footer .note {
+        display: table-cell;
+        vertical-align: top;
+        padding-top: 30px;
+      }
+      .footer .totals {
+        display: table-cell;
+        text-align: right;
+        padding-right: 30px;
+        padding-top: 30px;
+      }
+      .footer .totals div {
+        margin-bottom: 10px;
+      }
+      .two-column {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .two-column .col {
+        display: table-cell;
+        padding: 10px;
+      }
+      .two-column .col-1 {
+        width: 40%;
+        vertical-align: top;
+      }
+      .two-column .col-2 {
+        width: 60%;
+        vertical-align: top;
+      }
+      .highlight {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table>
+          <tr>
+            <td>
+              <img
+                style="width: 80px"
+                id="brandLogo"
+                src="https://gohire-backend-nj2d7.ondigitalocean.app/{{brandLogo}}"
+                alt="logo"
+              />
+            </td>
+            <td>
+              <div>
+                <span class="highlight">Invoice Date:</span> {{invoiceDate}}
+              </div>
+            </td>
+            <td>
+              <div>
+                <span class="highlight">Invoice Number:</span> {{invoiceNumber}}
+              </div>
+            </td>
+            <td>
+              <div>
+                <span class="highlight">Address:</span> {{deliveryAddress}}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="content">
+        <div class="two-column">
+          <div class="col col-1">
+            <table>
+              <tr>
+                <td>
+                  <strong>Customer Details:</strong><br />
+                  Name: {{customerName}}<br />
+                  Email: {{customerEmail}} <br />
+                  Address:
+                  {{customerAddress}},{{customerCity}},{{customerPostalCode}},{{customerCountry}}<br />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Order Details:</strong><br />
+                  Order No: {{orderId}}<br />
+                  Delivery Date: {{deliveryDate}}<br />
+                  Order Date: {{orderDate}}<br />
+                  Delivery Place: {{deliveryPlaceName}}
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div class="col col-2">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product Description</th>
+                  <th>Quantity</th>
+                  <th>Status</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Repeat this row for each product -->
+                {{#each products}}
+                <tr>
+                  <td>{{productName}}</td>
+                  <td>{{quantity}}</td>
+                  <td>{{type}}</td>
+                  <td>{{price}}$</td>
+                  <td><strong>{{total}}$</strong></td>
+                </tr>
+                {{/each}}
+                <!-- End product row -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="note">
+          <div><strong>Note: ___________</strong></div>
+        </div>
+        <div class="totals">
+          <div><strong>Sub Total: {{totalPrice}}$</strong></div>
+          <div><strong>Amount Due (GBP): {{totalPrice}}$</strong></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

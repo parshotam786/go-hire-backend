@@ -16,6 +16,7 @@ const {
   orderBookIn,
   generateOrderNote,
   invoicePDF,
+  invoiceByVendorId,
 } = require("../controllers/orderController");
 const allowedRoles = require("../utiles/allowRoles");
 
@@ -38,5 +39,6 @@ router.post("/bookout", orderBookOut);
 router.post("/bookin", orderBookIn);
 router.post("/generate-order-note", generateOrderNote);
 router.post("/generate-invoice-pdf", invoicePDF);
+router.post("/generate-all", invoiceByVendorId);
 
 module.exports = router;

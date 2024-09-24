@@ -12,6 +12,7 @@ const QuickBooks = require("node-quickbooks");
 const Quickbook = require("../models/quickbookAuth");
 const Vender = require("../models/venderModel");
 const nodemailer = require("nodemailer"); // Require nodemailer
+const { chromium } = require("playwright"); // Use Playwright instead of Puppeteer
 
 const venderModel = require("../models/venderModel");
 const htmlPdf = require("html-pdf");
@@ -870,7 +871,7 @@ const invoicePDF = async (req, res) => {
 
     // Prepare invoice data
     const invoiceData = {
-      // brandLogo: vendor.brandLogo,
+      brandLogo: vendor.brandLogo,
       invoiceDate: moment(deliveryData.bookDate).format("l"),
       invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
@@ -909,25 +910,14 @@ const invoicePDF = async (req, res) => {
 
     // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
-      headless: true, // Explicitly set headless mode
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
         "--remote-debugging-port=9222",
-        "--max-old-space-size=2048", // Increase memory allocation if needed
       ],
-      // Optional: Set path to manually installed Chrome or Chromium
-      executablePath: "/usr/bin/chromium-browser",
     });
-
-    // Optional: Disable page timeouts if needed (e.g., for large PDFs)
-    page.setDefaultNavigationTimeout(0);
-    page.setDefaultTimeout(0);
-
-    // Continue with your PDF generation logic
-
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -1488,7 +1478,7 @@ const invoiceByVendorId = async (req, res) => {
 
           // Create HTML content by passing data to the template
           const htmlContent = template({
-            // brandLogo: invoice.brandLogo,
+            brandLogo: invoice.brandLogo,
             invoiceDate: new Date().toLocaleDateString(),
             invoiceNumber: invoice.id,
             deliveryAddress: invoice.deliveryAddress,
@@ -1506,7 +1496,7 @@ const invoiceByVendorId = async (req, res) => {
             totalPrice: invoice.totalPrice.toFixed(2),
           });
 
-          const pdfBuffer = await createPdf(htmlContent);
+          const pdfBuffer = await createPdf(htmlContent); // Call the Playwright-based PDF generation function
 
           const mailOptions = {
             from: "parshotamrughanii@gmail.com",
@@ -1543,9 +1533,9 @@ const invoiceByVendorId = async (req, res) => {
 };
 
 const createPdf = async (html) => {
-  const browser = await puppeteer.launch();
+  const browser = await chromium.launch(); // Use Playwright to launch Chromium
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
+  await page.setContent(html, { waitUntil: "networkidle" });
   const pdfBuffer = await page.pdf({ format: "A4" });
   await browser.close();
   return pdfBuffer;

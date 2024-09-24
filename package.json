@@ -37,6 +37,7 @@
     "openai": "^4.54.0",
     "path": "^0.12.7",
     "pdf-lib": "^1.17.1",
+    "playwright": "^1.47.2",
     "puppeteer": "^23.3.0",
     "puppeteer-core": "^23.3.0",
     "swagger-jsdoc": "^6.2.8",

@@ -870,7 +870,7 @@ const invoicePDF = async (req, res) => {
 
     // Prepare invoice data
     const invoiceData = {
-      brandLogo: vendor.brandLogo,
+      // brandLogo: vendor.brandLogo,
       invoiceDate: moment(deliveryData.bookDate).format("l"),
       invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
@@ -1477,7 +1477,7 @@ const invoiceByVendorId = async (req, res) => {
 
           // Create HTML content by passing data to the template
           const htmlContent = template({
-            brandLogo: invoice.brandLogo,
+            // brandLogo: invoice.brandLogo,
             invoiceDate: new Date().toLocaleDateString(),
             invoiceNumber: invoice.id,
             deliveryAddress: invoice.deliveryAddress,

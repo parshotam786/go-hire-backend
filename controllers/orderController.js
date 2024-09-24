@@ -909,14 +909,25 @@ const invoicePDF = async (req, res) => {
 
     // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
+      headless: true, // Explicitly set headless mode
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
         "--remote-debugging-port=9222",
+        "--max-old-space-size=2048", // Increase memory allocation if needed
       ],
+      // Optional: Set path to manually installed Chrome or Chromium
+      executablePath: "/usr/bin/chromium-browser",
     });
+
+    // Optional: Disable page timeouts if needed (e.g., for large PDFs)
+    page.setDefaultNavigationTimeout(0);
+    page.setDefaultTimeout(0);
+
+    // Continue with your PDF generation logic
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 

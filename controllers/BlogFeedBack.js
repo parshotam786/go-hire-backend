@@ -12,6 +12,10 @@ const BlogFeedBackController = async (req, res) => {
   if (!message) {
     return res.status(400).json({ error: "Message is required." });
   }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).send({ error: "Invalid email format" });
+  }
   try {
     const newFeedback = new FeedBackBlog({
       name,
@@ -41,7 +45,9 @@ const BlogFeedBackController = async (req, res) => {
     await transporter.sendMail(mailOptions);
 
     // Return success response
-    res.status(200).json({ message: "Feedback saved and email sent!" });
+    res
+      .status(200)
+      .json({ success: true, message: "Feedback Sent Successfully!" });
   } catch (error) {
     console.error("Error saving feedback or sending email:", error);
     res.status(500).json({

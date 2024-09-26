@@ -1,4 +1,3 @@
-// models/YourModel.js
 const mongoose = require("mongoose");
 
 const FeedBackBlog = new mongoose.Schema(

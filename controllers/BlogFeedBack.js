@@ -36,9 +36,9 @@ const BlogFeedBackController = async (req, res) => {
     // Set up email options
     const mailOptions = {
       from: "parshotamrughanii@gmail.com",
-      to: "parshotamrughanii@gmail.com", // Send to the user's email
-      subject: "Thank you for your feedback!",
-      text: `Dear ${name},\n\nThank you for your message! We appreciate your feedback:\n\n"${message}"\n\nBest regards,\nYour Rentixx Team`,
+      to: "parshotamrughanii@gmail.com", // Your email address
+      subject: `Rentixx Feedback Received from ${name}`,
+      text: `You have received new feedback from ${name} (${email}):\n\n"${message}"\n\nBest regards,\nYour Rentixx Team`,
     };
 
     // Send email

@@ -14,6 +14,7 @@ const routes = [
   "categoriesRoutes",
   "quickbookRoutes",
   "reviewRoutes",
+  "BlogFeedBackRoutes",
 ];
 const app = express();
 app.use(cors());

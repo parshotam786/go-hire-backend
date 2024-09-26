@@ -36,22 +36,19 @@ const getAllCategoryList = async (req, res) => {
   try {
     const { parentId, name, page = 1, limit = 10 } = req.query;
 
-    // Build the filter object
     const filter = {
       parentId: parentId || null,
     };
 
-    // If a name is provided, add a regex search
     if (name) {
-      filter.name = { $regex: name, $options: "i" }; // 'i' makes it case-insensitive
+      filter.name = { $regex: name, $options: "i" };
     }
 
-    // Fetch categories with pagination and sorting
     const categories = await Category.find(filter)
       .sort("name")
-      .skip((page - 1) * limit) // Pagination: skip the previous pages' items
-      .limit(Number(limit)); // Limit: how many items per page
-    // Get total count for pagination information
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
     const total = await Category.countDocuments(filter);
 
     res.json({
@@ -60,7 +57,7 @@ const getAllCategoryList = async (req, res) => {
       total,
       page: Number(page),
       limit: Number(limit),
-      totalPages: Math.ceil(total / limit), // Calculate the total number of pages
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
     res.status(500).json({ message: err.message, success: false });
@@ -70,24 +67,21 @@ const getAllSubCategoryList = async (req, res) => {
   try {
     const { parentId, name, page = 1, limit = 10 } = req.query;
 
-    // Build the filter object
     const filter = {
       parentId: parentId || null,
     };
 
-    // If a name is provided, add a regex search
     if (name) {
-      filter.name = { $regex: name, $options: "i" }; // 'i' makes it case-insensitive
+      filter.name = { $regex: name, $options: "i" };
     }
 
-    // Fetch categories with pagination and sorting
     const categories = await Category.find(filter)
       .sort("name")
-      .skip((page - 1) * limit) // Pagination: skip the previous pages' items
-      .limit(Number(limit)); // Limit: how many items per page
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
     const parentCategory = await Category.findOne({ _id: parentId });
     const mainCategory = parentCategory.name;
-    // Get total count for pagination information
+
     const total = await Category.countDocuments(filter);
 
     res.json({
@@ -97,14 +91,13 @@ const getAllSubCategoryList = async (req, res) => {
       total,
       page: Number(page),
       limit: Number(limit),
-      totalPages: Math.ceil(total / limit), // Calculate the total number of pages
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
     res.status(500).json({ message: err.message, success: false });
   }
 };
 
-// Add a new category
 const addCategory = async (req, res) => {
   const category = new Category({
     name: req.body.name,
@@ -135,23 +128,18 @@ const updateCategoryStatus = async (req, res) => {
   const { id, isActive } = req.body;
 
   try {
-    // Find the category by ID
     const category = await Category.findById(id);
 
-    // Check if the category exists
     if (!category) {
       return res
         .status(404)
         .send({ success: false, message: "Category not found" });
     }
 
-    // Update the status
     category.isActive = isActive;
 
-    // Save the updated category
     const updatedCategory = await category.save();
 
-    // Return the updated category
     res.status(200).json({
       success: true,
       message: "Status change successfully!",
@@ -166,27 +154,23 @@ const updateCategory = async (req, res) => {
   const { id, name } = req.body;
 
   try {
-    // Find the category by ID
     const category = await Category.findById(id);
     if (name === "") {
       return res
         .status(404)
         .send({ success: false, message: "Name field Empty!" });
     }
-    // Check if the category exists
+
     if (!category) {
       return res
         .status(404)
         .send({ success: false, message: "Category not found" });
     }
 
-    // Update the status
     category.name = name;
 
-    // Save the updated category
     const updatedCategory = await category.save();
 
-    // Return the updated category
     res.status(200).json({
       success: true,
       updatedCategory,

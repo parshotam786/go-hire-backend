@@ -1,0 +1,5 @@
+productName,companyProductName,productDescription,status,rentPrice,rentDuration,salePrice,quantity,taxClass,minHireTime,range,vat,rate,lenghtUnit,weightUnit,weight,length,width,height,isActive
+Camera,Hogan Wolfe Plc,Voluptatem Incididu,Rental,3453,, ,248,sale tax,1 Week,,12,,ft,lb,79,86,41,92,Active
+Laptop,Tech Systems Ltd,Reprehenderit Voluptates,Sale, , ,1200,100,standard tax,, ,15,,cm,kg,2.5,35,22,3,Inactive
+Projector,VisionTech Corp,Neque Porro Quisquam,Rental,2750,7 Days, ,50,zero tax,2 Days,,10,,m,kg,6,50,25,10,Active
+Drone,FlyHigh Enterprises,Dolor Sit Amet,Rental,5000,3 Days,,30,sale tax,1 Week,,8,,m,lb,4,75,30,15,Active

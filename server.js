@@ -15,6 +15,7 @@ const routes = [
   "quickbookRoutes",
   "reviewRoutes",
   "BlogFeedBackRoutes",
+  "importDataRoutes",
 ];
 const app = express();
 app.use(cors());
@@ -42,6 +43,12 @@ routes.forEach((route) => {
 
 app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/order", authenticateUser, require("./routes/orderRoutes"));
+app.use("/api/imports", authenticateUser, require("./routes/importBilkData"));
+app.use(
+  "/api/rate-definition",
+  authenticateUser,
+  require("./routes/rateDifinitionRoutes")
+);
 app.use("/api/document", authenticateUser, require("./routes/documentRoutes"));
 app.use(
   "/api/tax-classes",

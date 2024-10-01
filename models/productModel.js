@@ -7,10 +7,10 @@ const productSchema = new mongoose.Schema(
     productDescription: { type: String, required: true },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+
       ref: "Category",
     },
-    status: { type: String, required: true },
+    status: { type: String },
     // stockType: { type: String, required: true },
     // productPrice: { type: String, required: true },
     // additionalInfo: { type: String, required: true },
@@ -18,7 +18,7 @@ const productSchema = new mongoose.Schema(
     rentDuration: { type: String },
     subCategory: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+
       ref: "Category",
     },
     salePrice: { type: String },
@@ -38,7 +38,7 @@ const productSchema = new mongoose.Schema(
     height: { type: Number },
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+
       ref: "Vender",
     },
     images: [{ type: String, required: true }],

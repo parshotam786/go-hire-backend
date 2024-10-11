@@ -1,5 +1,6 @@
 const express = require("express");
 const Category = require("../models/categoriesModal");
+const Product = require("../models/productModel");
 
 // Get all categories
 const getAllCategory = async (req, res) => {
@@ -184,6 +185,15 @@ const updateCategory = async (req, res) => {
 const removeCategoryController = async (req, res) => {
   try {
     const categoryId = req.params.id;
+    const productExists = await Product.findOne({ category: categoryId });
+
+    if (productExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Category in use, cannot delete.",
+      });
+    }
+
     const result = await Category.findByIdAndDelete(categoryId);
 
     if (!result) {

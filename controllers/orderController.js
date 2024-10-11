@@ -21,6 +21,111 @@ const Handlebars = require("handlebars");
 const moment = require("moment/moment");
 const path = require("path");
 
+function countWeekdaysBetweenDates(date1, date2) {
+  const start = new Date(date1);
+  const end = new Date(date2);
+  let weekdaysCount = 0;
+
+  // Loop through each day from start to end date
+  while (start <= end) {
+    const dayOfWeek = start.getDay(); // 0 = Sunday, 6 = Saturday
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      weekdaysCount++; // Count the day if it's not Saturday or Sunday
+    }
+    // Move to the next day
+    start.setDate(start.getDate() + 1);
+  }
+
+  return weekdaysCount;
+}
+
+function countDaysBetween(date1, date2) {
+  const startDate = new Date(date1);
+  const endDate = new Date(date2);
+
+  // Calculate the time difference in milliseconds
+  const timeDifference = endDate - startDate;
+
+  // Convert time difference from milliseconds to days
+  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+  return daysDifference;
+}
+
+function calculateProductPrice(
+  productPrice,
+  weekdays,
+  totalDaysCount,
+  days,
+  daysInWeek,
+  minimumRentalPeriod
+) {
+  const countDays = daysInWeek == 5 ? weekdays : totalDaysCount;
+  console.log({ countDays, weekdays, minimumRentalPeriod }, "starttt");
+  // const fullWeeks = Math.floor(countDays / daysInWeek); // Get the number of full weeks
+  // const remainingDays = countDays % daysInWeek; // Get the remaining days
+
+  // // Calculate total price for full weeks
+  // const totalWeekPrice =
+  //   fullWeeks < minimumRentalPeriod
+  //     ? minimumRentalPeriod * productPrice
+  //     : fullWeeks * productPrice;
+
+  // // Calculate percentage-based price for remaining days
+  // const remainingDaysPercentage = days
+  //   .slice(0, remainingDays)
+  //   .reduce((acc, percent) => acc + percent, 0);
+  // const remainingDaysPrice = (remainingDaysPercentage / 100) * productPrice;
+
+  // Total price is the sum of the full weeks' price and the remaining days' price
+
+  const totalPrice =
+    countDays <= minimumRentalPeriod
+      ? minimumRentalPeriod * productPrice
+      : countDays * productPrice;
+
+  return {
+    // fullWeeks,
+    // remainingDays,
+    // remainingDaysPercentage,
+    totalPrice,
+  };
+}
+
+// monthly rate engin
+// function calculateProductPrice(date1, date2, monthlyPrice) {
+//   const startDate = new Date(date1);
+//   const endDate = new Date(date2);
+
+//   // Calculate the time difference in milliseconds
+//   const timeDifference = endDate - startDate;
+
+//   // Convert time difference from milliseconds to days
+//   const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+//   // Determine the number of full months and remaining days
+//   const fullMonths = Math.floor(daysDifference / 30);
+//   const remainingDays = daysDifference % 30;
+
+//   // Calculate the daily price (assuming a 30-day month)
+//   const dailyPrice = monthlyPrice / 30;
+
+//   // Calculate the total price
+//   const totalPrice = (fullMonths * monthlyPrice) + (remainingDays * dailyPrice);
+
+//   return totalPrice.toFixed(2); // Rounded to two decimal places
+// }
+
+// function sumArrayUpToIndex(arr, index) {
+//   // Check if the index is within the bounds of the array
+//   if (index < 0 || index >= arr.length) {
+//     throw new Error("Index is out of bounds");
+//   }
+
+//   // Sum the elements of the array up to the specified index
+//   return arr.slice(0, index + 1).reduce((acc, val) => acc + val, 0);
+// }
+
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
   const uniqueId =
@@ -697,6 +802,13 @@ const generateOrderNote = async (req, res) => {
       // },
     ]);
 
+    const chargingStart = deliveryData.orderDetails.chargingStartDate;
+    const bookDateStart = deliveryData.bookDate;
+    console.log({ deliveryData });
+    const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
+    const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+    console.log({ daysCount, totalDaysCount });
+
     if (!deliveryData) {
       return errorResponse(res, { message: "No data found" });
     }
@@ -725,12 +837,68 @@ const generateOrderNote = async (req, res) => {
     deliveryData.products = mergedProducts;
     const vender = await venderModel.findById(vendorId);
 
-    const isQuickBookAccountExist = vender.isQuickBook;
-    console.log(
-      "start",
-      deliveryData.orderDetails.cunstomerQuickbookId,
-      "ddddd"
+    const invoiceData = {
+      brandLogo: vender.brandLogo,
+      invoiceDate: moment(deliveryData.bookDate).format("l"),
+      invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
+      deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
+      customerName: deliveryData.customerDetails.name,
+      customerAddress: deliveryData.customerDetails.addressLine1,
+      customerCity: deliveryData.customerDetails.city,
+      customerCountry: deliveryData.customerDetails.country,
+      customerPostCode: deliveryData.customerDetails.postCode,
+      customerEmail: deliveryData.customerDetails.email,
+      orderId: deliveryData.orderDetails.orderId,
+      orderType: deliveryData.deliveryNote,
+      orderNumber: deliveryData.orderDetails.orderId,
+      deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
+        "lll"
+      ),
+      orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
+      deliveryPlaceName: deliveryData.orderDetails.city,
+      products: deliveryData.products.map((item) => {
+        const days = [
+          Number(item.Day1),
+          Number(item.Day2),
+          Number(item.Day3),
+          Number(item.Day4),
+          Number(item.Day5),
+          Number(item.Day6),
+        ];
+
+        const daysInWeek = Number(item?.rentalDaysPerWeek);
+        const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+        const productTotalPrice = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).totalPrice;
+        console.log({ productTotalPrice });
+        return {
+          productName: item.productName,
+          quantity: item.quantity,
+          type: item.type,
+          price: item.price,
+          total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
+        };
+      }),
+      totalPrice: deliveryData.products.reduce(
+        (acc, item) => acc + item.total * item.quantity,
+        0
+      ),
+    };
+    const sumTotalPrice = invoiceData.products.reduce(
+      (acc, product) => acc + product.total,
+      0
     );
+
+    // Updating the totalPrice in the data object
+    invoiceData.totalPrice = sumTotalPrice;
+
+    const isQuickBookAccountExist = vender.isQuickBook;
 
     if (
       isQuickBookAccountExist &&
@@ -795,7 +963,7 @@ const generateOrderNote = async (req, res) => {
       });
     } else {
       return successResponse(res, {
-        data: deliveryData,
+        data: invoiceData,
         message: "Invoice fetched successfully",
       });
     }
@@ -864,13 +1032,19 @@ const invoicePDF = async (req, res) => {
 
       return product;
     });
+    const chargingStart = deliveryData.orderDetails.chargingStartDate;
+    const bookDateStart = deliveryData.bookDate;
+    console.log({ deliveryData });
+    const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
+    const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+    console.log({ daysCount, totalDaysCount });
 
     deliveryData.products = mergedProducts;
     const vendor = await venderModel.findById(vendorId);
 
     // Prepare invoice data
     const invoiceData = {
-      brandLogo: vendor.brandLogo,
+      brandLogo: vendor?.brandLogo,
       invoiceDate: moment(deliveryData.bookDate).format("l"),
       invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
@@ -888,18 +1062,47 @@ const invoicePDF = async (req, res) => {
       ),
       orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
       deliveryPlaceName: deliveryData.orderDetails.city,
-      products: deliveryData.products.map((item) => ({
-        productName: item.productName,
-        quantity: item.quantity,
-        type: item.type,
-        price: item.price,
-        total: item.quantity * item.price,
-      })),
+      products: deliveryData.products.map((item) => {
+        const days = [
+          Number(item.Day1),
+          Number(item.Day2),
+          Number(item.Day3),
+          Number(item.Day4),
+          Number(item.Day5),
+          Number(item.Day6),
+        ];
+
+        const daysInWeek = Number(item?.rentalDaysPerWeek);
+        const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+        const productTotalPrice = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).totalPrice;
+        console.log({ productTotalPrice });
+        return {
+          productName: item.productName,
+          quantity: item.quantity,
+          type: item.type,
+          price: item.price,
+          total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
+        };
+      }),
       totalPrice: deliveryData.products.reduce(
-        (acc, item) => acc + item.price * item.quantity,
+        (acc, item) => acc + item.total * item.quantity,
         0
       ),
     };
+    const sumTotalPrice = invoiceData.products.reduce(
+      (acc, product) => acc + product.total,
+      0
+    );
+
+    // Updating the totalPrice in the data object
+    invoiceData.totalPrice = sumTotalPrice;
 
     // Load and compile HTML template
     const templatePath = path.join(__dirname, "invoice.html");

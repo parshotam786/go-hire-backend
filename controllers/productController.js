@@ -18,6 +18,7 @@ exports.addProduct = async (req, res) => {
       quantity,
       range,
       minHireTime,
+      rateDefinition,
       vat,
       subCategory,
       vendorId,
@@ -75,6 +76,7 @@ exports.addProduct = async (req, res) => {
       quantity: parseInt(quantity),
       range,
       minHireTime,
+      rateDefinition,
       vat,
       rate,
       lenghtUnit,
@@ -88,10 +90,15 @@ exports.addProduct = async (req, res) => {
     });
 
     // Save the product
-    await product.save();
 
+    const savedProduct = await product.save();
+
+    // Populate rateDefinition field
+    await savedProduct.populate("rateDefinition");
     // Respond with success message
-    res.status(201).json({ message: "Product added successfully", product });
+    res
+      .status(201)
+      .json({ message: "Product added successfully", product: savedProduct });
   } catch (error) {
     // Handle unexpected errors
     console.error("Error adding product:", error);
@@ -351,7 +358,7 @@ exports.getProductsBySearch = async (req, res) => {
       .sort({
         createdAt: -1,
       })
-      .populate(["category", "subCategory"]);
+      .populate(["category", "subCategory", "rateDefinition"]);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,
@@ -369,6 +376,7 @@ exports.getProductsBySearch = async (req, res) => {
       minHireTime: product.minHireTime,
       taxClass: product.taxClass,
       vat: product.vat,
+      rateDefinition: product.rateDefinition,
       rate: product.rate,
       lenghtUnit: product.lenghtUnit,
       weightUnit: product.weightUnit,

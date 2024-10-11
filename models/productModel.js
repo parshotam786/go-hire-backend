@@ -21,6 +21,11 @@ const productSchema = new mongoose.Schema(
 
       ref: "Category",
     },
+    rateDefinition: {
+      type: mongoose.Schema.Types.ObjectId,
+
+      ref: "RateDefinition",
+    },
     salePrice: { type: String },
     quantity: { type: Number, required: true },
     taxClass: {

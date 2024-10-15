@@ -1,3 +1,4 @@
+const Product = require("../models/productModel");
 const RateDefinition = require("../models/rateDifinitionModel");
 
 // Add Rate Definition Controller
@@ -233,6 +234,18 @@ const getRateDefinitionById = async (req, res) => {
 const deleteRateDefinitionController = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const rateDefinitionId = id;
+    const productExists = await Product.findOne({
+      rateDefinition: rateDefinitionId,
+    });
+
+    if (productExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Rate Definition in use, cannot delete.",
+      });
+    }
 
     const rateDefinition = await RateDefinition.findById(id);
     if (!rateDefinition) {

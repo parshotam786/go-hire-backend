@@ -96,15 +96,18 @@ exports.addProduct = async (req, res) => {
     // Populate rateDefinition field
     await savedProduct.populate("rateDefinition");
     // Respond with success message
-    res
-      .status(201)
-      .json({ message: "Product added successfully", product: savedProduct });
+    res.status(201).json({
+      success: true,
+      message: "Product added successfully",
+      product: savedProduct,
+    });
   } catch (error) {
     // Handle unexpected errors
     console.error("Error adding product:", error);
-    res
-      .status(500)
-      .json({ message: "An error occurred while adding the product." });
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while adding the product.",
+    });
   }
 };
 
@@ -124,6 +127,7 @@ exports.updateProduct = async (req, res) => {
       rentDuration,
       salePrice,
       availability,
+      rateDefinition,
       quantity,
       range,
       minHireTime,
@@ -156,6 +160,7 @@ exports.updateProduct = async (req, res) => {
       rentDuration,
       salePrice,
       availability,
+      rateDefinition,
       quantity,
       range,
       minHireTime,

@@ -1006,6 +1006,12 @@ const invoicePDF = async (req, res) => {
       },
       { $unwind: "$customerDetails" },
     ]);
+    const chargingStart = deliveryData.orderDetails.chargingStartDate;
+    const bookDateStart = deliveryData.bookDate ?? deliveryData.returnDate;
+    console.log({ deliveryData });
+    const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
+    const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+    console.log({ daysCount, totalDaysCount });
 
     if (!deliveryData) {
       return res.status(404).json({ message: "No data found" });
@@ -1036,7 +1042,6 @@ const invoicePDF = async (req, res) => {
     deliveryData.products = mergedProducts;
     const vendor = await venderModel.findById(vendorId);
 
-    // Prepare invoice data
     const invoiceData = {
       brandLogo: vendor.brandLogo,
       invoiceDate: moment(deliveryData.bookDate).format("l"),
@@ -1056,18 +1061,47 @@ const invoicePDF = async (req, res) => {
       ),
       orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
       deliveryPlaceName: deliveryData.orderDetails.city,
-      products: deliveryData.products.map((item) => ({
-        productName: item.productName,
-        quantity: item.quantity,
-        type: item.type,
-        price: item.price,
-        total: item.quantity * item.price,
-      })),
+      products: deliveryData.products.map((item) => {
+        const days = [
+          Number(item.Day1),
+          Number(item.Day2),
+          Number(item.Day3),
+          Number(item.Day4),
+          Number(item.Day5),
+          Number(item.Day6),
+        ];
+
+        const daysInWeek = Number(item?.rentalDaysPerWeek);
+        const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+        const productTotalPrice = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).totalPrice;
+        console.log({ productTotalPrice });
+        return {
+          productName: item.productName,
+          quantity: item.quantity,
+          type: item.type,
+          price: item.price,
+          total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
+        };
+      }),
       totalPrice: deliveryData.products.reduce(
-        (acc, item) => acc + item.price * item.quantity,
+        (acc, item) => acc + item.total * item.quantity,
         0
       ),
     };
+    const sumTotalPrice = invoiceData.products.reduce(
+      (acc, product) => acc + product.total,
+      0
+    );
+
+    // Updating the totalPrice in the data object
+    invoiceData.totalPrice = sumTotalPrice;
 
     // Load and compile HTML template
     const templatePath = path.join(__dirname, "invoice.html");

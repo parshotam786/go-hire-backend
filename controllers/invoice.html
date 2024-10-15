@@ -90,11 +90,11 @@
         padding: 10px;
       }
       .two-column .col-1 {
-        width: 40%;
+        width: 30%;
         vertical-align: top;
       }
       .two-column .col-2 {
-        width: 60%;
+        width: 70%;
         vertical-align: top;
       }
       .highlight {
@@ -164,6 +164,8 @@
                   <th>Product Description</th>
                   <th>Quantity</th>
                   <th>Status</th>
+                  <th>Min/Rental Period</th>
+                  <th>Week/Days</th>
                   <th>Price</th>
                   <th>Total</th>
                 </tr>
@@ -175,6 +177,8 @@
                   <td>{{productName}}</td>
                   <td>{{quantity}}</td>
                   <td>{{type}}</td>
+                  <td>{{minimumRentalPeriod}} Days</td>
+                  <td>{{weeks}} - {{days}}</td>
                   <td>{{price}}$/day</td>
                   <td><strong>{{total}}$</strong></td>
                 </tr>

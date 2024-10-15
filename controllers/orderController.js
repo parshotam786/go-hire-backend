@@ -47,7 +47,8 @@ function countDaysBetween(date1, date2) {
   const timeDifference = endDate - startDate;
 
   // Convert time difference from milliseconds to days
-  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+  const days = timeDifference / (1000 * 60 * 60 * 24);
+  const daysDifference = days + 1;
 
   return daysDifference;
 }
@@ -62,8 +63,8 @@ function calculateProductPrice(
 ) {
   const countDays = daysInWeek == 5 ? weekdays : totalDaysCount;
   console.log({ countDays, weekdays, minimumRentalPeriod }, "starttt");
-  // const fullWeeks = Math.floor(countDays / daysInWeek); // Get the number of full weeks
-  // const remainingDays = countDays % daysInWeek; // Get the remaining days
+  const fullWeeks = Math.floor(countDays / daysInWeek); // Get the number of full weeks
+  const remainingDays = countDays % daysInWeek; // Get the remaining days
 
   // // Calculate total price for full weeks
   // const totalWeekPrice =
@@ -85,8 +86,8 @@ function calculateProductPrice(
       : countDays * productPrice;
 
   return {
-    // fullWeeks,
-    // remainingDays,
+    fullWeeks,
+    remainingDays,
     // remainingDaysPercentage,
     totalPrice,
   };
@@ -876,12 +877,32 @@ const generateOrderNote = async (req, res) => {
           daysInWeek,
           minimumRentailPeriod
         ).totalPrice;
+        const fullWeeks = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).fullWeeks;
+        const remainingDays = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).remainingDays;
+
         console.log({ productTotalPrice });
         return {
           productName: item.productName,
           quantity: item.quantity,
           type: item.type,
+          weeks: fullWeeks,
+          days: remainingDays,
           price: item.price,
+          minimumRentalPeriod: minimumRentailPeriod,
           total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
         };
       }),
@@ -1081,12 +1102,32 @@ const invoicePDF = async (req, res) => {
           daysInWeek,
           minimumRentailPeriod
         ).totalPrice;
+        const fullWeeks = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).fullWeeks;
+        const remainingDays = calculateProductPrice(
+          item?.price,
+          daysCount,
+          totalDaysCount,
+          days,
+          daysInWeek,
+          minimumRentailPeriod
+        ).remainingDays;
+
         console.log({ productTotalPrice });
         return {
           productName: item.productName,
           quantity: item.quantity,
           type: item.type,
           price: item.price,
+          weeks: fullWeeks,
+          minimumRentalPeriod: minimumRentailPeriod,
+          days: remainingDays,
           total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
         };
       }),

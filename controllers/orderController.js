@@ -1143,9 +1143,12 @@ const invoicePDF = async (req, res) => {
 
     // Updating the totalPrice in the data object
     invoiceData.totalPrice = sumTotalPrice;
-
+    const isInvoiceBookIn = invoiceData.invoiceNumber;
     // Load and compile HTML template
-    const templatePath = path.join(__dirname, "invoice.html");
+    const templatePath = path.join(
+      __dirname,
+      isInvoiceBookIn.startsWith("RN") ? "invoice.html" : "dninvoice.html"
+    );
     const templateHtml = fs.readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);

@@ -25,6 +25,7 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
 
       ref: "RateDefinition",
+      default: null,
     },
     salePrice: { type: String },
     quantity: { type: Number, required: true },

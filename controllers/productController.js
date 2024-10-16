@@ -243,7 +243,7 @@ exports.getProductsByVendorId = async (req, res) => {
       .sort({
         createdAt: -1,
       })
-      .populate(["category", "subCategory"]);
+      .populate(["category", "subCategory", "rateDefinition"]);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,
@@ -261,6 +261,7 @@ exports.getProductsByVendorId = async (req, res) => {
       range: product.range,
       minHireTime: product.minHireTime,
       vat: product.vat,
+      minimumRentalPeriod: product?.rateDefinition?.minimumRentalPeriod,
       rate: product.rate,
       lenghtUnit: product.lenghtUnit,
       weightUnit: product.weightUnit,

@@ -167,6 +167,7 @@
                   <th>Min/Rental Period</th>
                   <th>Week/Days</th>
                   <th>Price</th>
+                  <th>VAT</th>
                   <th>Total</th>
                 </tr>
               </thead>
@@ -180,6 +181,7 @@
                   <td>{{minimumRentalPeriod}} Days</td>
                   <td>{{weeks}} - {{days}}</td>
                   <td>{{price}}$/day</td>
+                  <td>{{vat}}%</td>
                   <td><strong>{{total}}$</strong></td>
                 </tr>
                 {{/each}}
@@ -195,7 +197,8 @@
         </div>
         <div class="totals">
           <div><strong>Sub Total: {{totalPrice}}$</strong></div>
-          <div><strong>Amount Due (GBP): {{totalPrice}}$</strong></div>
+          <div><strong>VAT: {{vatTotal}}$</strong></div>
+          <div><strong>Amount Due (VAT): {{vattotalPrice}}$</strong></div>
         </div>
       </div>
     </div>

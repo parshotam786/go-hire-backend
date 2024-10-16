@@ -93,6 +93,15 @@ function calculateProductPrice(
   };
 }
 
+const percetageCalculate = (taxRate, price) => {
+  let percentage = (taxRate / 100) * price;
+  return percentage + price;
+};
+const percetageCalculateVat = (taxRate, price) => {
+  let percentage = (taxRate / 100) * price;
+  return percentage;
+};
+
 // monthly rate engin
 // function calculateProductPrice(date1, date2, monthlyPrice) {
 //   const startDate = new Date(date1);
@@ -901,23 +910,40 @@ const generateOrderNote = async (req, res) => {
           type: item.type,
           weeks: fullWeeks,
           days: remainingDays,
+          vat: item.taxRate,
           price: item.price,
           minimumRentalPeriod: minimumRentailPeriod,
-          total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
+          vatTotal: Number((item.quantity * productTotalPrice).toFixed(2)),
+          total: percetageCalculate(
+            item.taxRate,
+            Number((item.quantity * productTotalPrice).toFixed(2))
+          ), // Final calculation with toFixed after
         };
       }),
+      vattotalPrice: deliveryData.products.reduce(
+        (acc, item) => acc + item.vatTotal * item.quantity,
+        0
+      ),
       totalPrice: deliveryData.products.reduce(
         (acc, item) => acc + item.total * item.quantity,
         0
       ),
+      vatTotal: deliveryData.products.reduce(
+        (acc, item) => acc + item.total * item.quantity,
+        0
+      ),
     };
-    const sumTotalPrice = invoiceData.products.reduce(
-      (acc, product) => acc + product.total,
-      0
-    );
+    const sumTotalPrice = invoiceData.products
+      .reduce((acc, product) => acc + product.total, 0)
+      .toFixed(2);
+    const sumTotalPriceVAT = invoiceData.products
+      .reduce((acc, product) => acc + product.vatTotal, 0)
+      .toFixed(2);
 
     // Updating the totalPrice in the data object
-    invoiceData.totalPrice = sumTotalPrice;
+    invoiceData.totalPrice = sumTotalPriceVAT;
+    invoiceData.vattotalPrice = sumTotalPrice;
+    invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
 
     const isQuickBookAccountExist = vender.isQuickBook;
 
@@ -1126,23 +1152,40 @@ const invoicePDF = async (req, res) => {
           type: item.type,
           price: item.price,
           weeks: fullWeeks,
+          vat: item.taxRate,
           minimumRentalPeriod: minimumRentailPeriod,
           days: remainingDays,
-          total: Number((item.quantity * productTotalPrice).toFixed(2)), // Final calculation with toFixed after
+          vatTotal: Number((item.quantity * productTotalPrice).toFixed(2)),
+          total: percetageCalculate(
+            item.taxRate,
+            Number((item.quantity * productTotalPrice).toFixed(2))
+          ), // Final calculation with toFixed after
         };
       }),
+      vattotalPrice: deliveryData.products.reduce(
+        (acc, item) => acc + item.vatTotal * item.quantity,
+        0
+      ),
       totalPrice: deliveryData.products.reduce(
         (acc, item) => acc + item.total * item.quantity,
         0
       ),
+      vatTotal: deliveryData.products.reduce(
+        (acc, item) => acc + item.total * item.quantity,
+        0
+      ),
     };
-    const sumTotalPrice = invoiceData.products.reduce(
-      (acc, product) => acc + product.total,
-      0
-    );
+    const sumTotalPrice = invoiceData.products
+      .reduce((acc, product) => acc + product.total, 0)
+      .toFixed(2);
+    const sumTotalPriceVAT = invoiceData.products
+      .reduce((acc, product) => acc + product.vatTotal, 0)
+      .toFixed(2);
 
     // Updating the totalPrice in the data object
-    invoiceData.totalPrice = sumTotalPrice;
+    invoiceData.totalPrice = sumTotalPriceVAT;
+    invoiceData.vattotalPrice = sumTotalPrice;
+    invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
     const isInvoiceBookIn = invoiceData.invoiceNumber;
     // Load and compile HTML template
     const templatePath = path.join(

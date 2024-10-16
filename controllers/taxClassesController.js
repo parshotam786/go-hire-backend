@@ -3,7 +3,15 @@ const taxClassesModel = require("../models/taxClassesModel");
 // Controller to add a new tax class
 const addTaxClass = async (req, res) => {
   try {
-    const { type, name, description, defaultStatus } = req.body;
+    const {
+      type,
+      name,
+      description,
+      defaultStatus,
+      postcode,
+      country,
+      taxRate,
+    } = req.body;
     const { _id: vendorId } = req.user;
     console.log(vendorId);
     // Check for required fields
@@ -13,12 +21,20 @@ const addTaxClass = async (req, res) => {
     if (!description) {
       return res.status(400).json({ message: "Description required." });
     }
-
+    if (!taxRate) {
+      return res.status(400).json({ message: "Tax Rate required." });
+    }
+    if (!country) {
+      return res.status(400).json({ message: "Country required." });
+    }
     // Create a new tax class
     const newTaxClass = new taxClassesModel({
       vendorId,
       type,
       name,
+      postcode,
+      country,
+      taxRate,
       description,
       defaultStatus,
     });
@@ -159,7 +175,15 @@ const updateTaxClass = async (req, res) => {
   try {
     const { _id: vendorId } = req.user;
     const { id } = req.params;
-    const { name, description, defaultStatus, type } = req.body;
+    const {
+      name,
+      description,
+      defaultStatus,
+      type,
+      postcode,
+      country,
+      taxRate,
+    } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Name is required." });
@@ -170,7 +194,7 @@ const updateTaxClass = async (req, res) => {
 
     const updatedTaxClass = await taxClassesModel.findOneAndUpdate(
       { _id: id, vendorId },
-      { name, description, defaultStatus, type },
+      { name, description, defaultStatus, type, postcode, country, taxRate },
       { new: true, runValidators: true }
     );
 

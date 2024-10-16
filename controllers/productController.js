@@ -94,12 +94,12 @@ exports.addProduct = async (req, res) => {
     const savedProduct = await product.save();
 
     // Populate rateDefinition field
-    await savedProduct.populate("rateDefinition");
+    await savedProduct.populate(["taxClass", "rateDefinition"]);
     // Respond with success message
     res.status(201).json({
       success: true,
       message: "Product added successfully",
-      product: savedProduct,
+      // product: savedProduct,
     });
   } catch (error) {
     // Handle unexpected errors
@@ -364,7 +364,7 @@ exports.getProductsBySearch = async (req, res) => {
       .sort({
         createdAt: -1,
       })
-      .populate(["category", "subCategory", "rateDefinition"]);
+      .populate(["category", "subCategory", "rateDefinition", "taxClass"]);
 
     const transformedProducts = products.map((product) => ({
       id: product._id,

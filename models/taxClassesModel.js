@@ -22,6 +22,18 @@ const TaxClasses = new mongoose.Schema(
       type: String,
       required: true,
     },
+    postcode: {
+      type: Number,
+      required: true,
+    },
+    country: {
+      type: String,
+      required: true,
+    },
+    taxRate: {
+      type: Number,
+      required: true,
+    },
     defaultStatus: {
       type: Boolean,
     },

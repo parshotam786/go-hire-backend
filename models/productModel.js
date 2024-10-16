@@ -30,7 +30,10 @@ const productSchema = new mongoose.Schema(
     salePrice: { type: String },
     quantity: { type: Number, required: true },
     taxClass: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+
+      ref: "TaxClasses",
+      default: null,
     },
     minHireTime: { type: String },
     range: { type: String },

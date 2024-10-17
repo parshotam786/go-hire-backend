@@ -62,7 +62,6 @@ function calculateProductPrice(
   minimumRentalPeriod
 ) {
   const countDays = daysInWeek == 5 ? weekdays : totalDaysCount;
-  console.log({ countDays, weekdays, minimumRentalPeriod }, "starttt");
   const fullWeeks = Math.floor(countDays / daysInWeek); // Get the number of full weeks
   const remainingDays = countDays % daysInWeek; // Get the remaining days
 

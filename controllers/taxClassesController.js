@@ -28,6 +28,9 @@ const addTaxClass = async (req, res) => {
     if (!country) {
       return res.status(400).json({ message: "Country required." });
     }
+    if (!postcode) {
+      return res.status(400).json({ message: "Postcode required." });
+    }
     // Create a new tax class
     const newTaxClass = new taxClassesModel({
       vendorId,

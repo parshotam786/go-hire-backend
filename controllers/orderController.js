@@ -913,11 +913,20 @@ const generateOrderNote = async (req, res) => {
           vat: item.taxRate,
           price: item.price,
           minimumRentalPeriod: minimumRentailPeriod,
-          vatTotal: Number((item.quantity * productTotalPrice).toFixed(2)),
-          total: percetageCalculate(
-            item.taxRate,
-            Number((item.quantity * productTotalPrice).toFixed(2))
-          ), // Final calculation with toFixed after
+          vatTotal:
+            item.type == "Sale"
+              ? Number(item.quantity * item.price)
+              : Number((item.quantity * productTotalPrice).toFixed(2)),
+          total:
+            item.type == "Sale"
+              ? percetageCalculate(
+                  item.taxRate,
+                  Number(item.quantity * item.price)
+                )
+              : percetageCalculate(
+                  item.taxRate,
+                  Number((item.quantity * productTotalPrice).toFixed(2))
+                ), // Final calculation with toFixed after
         };
       }),
       vattotalPrice: deliveryData.products.reduce(
@@ -1150,16 +1159,30 @@ const invoicePDF = async (req, res) => {
           productName: item.productName,
           quantity: item.quantity,
           type: item.type,
-          price: item.price,
-          weeks: fullWeeks,
+          price: item.type == "Sale" ? `${item.price}$` : `${item.price}$/day`,
+          weeks: item.type == "Sale" ? "-" : fullWeeks,
           vat: item.taxRate,
-          minimumRentalPeriod: minimumRentailPeriod,
-          days: remainingDays,
-          vatTotal: Number((item.quantity * productTotalPrice).toFixed(2)),
-          total: percetageCalculate(
-            item.taxRate,
-            Number((item.quantity * productTotalPrice).toFixed(2))
-          ), // Final calculation with toFixed after
+          minimumRentalPeriod:
+            item.type == "Sale"
+              ? "-"
+              : `${minimumRentailPeriod} ${
+                  minimumRentailPeriod === 1 ? "Day" : "Days"
+                }`,
+          days: item.type == "Sale" ? "" : `/${remainingDays}`,
+          vatTotal:
+            item.type == "Sale"
+              ? Number(item.quantity * item.price)
+              : Number((item.quantity * productTotalPrice).toFixed(2)),
+          total:
+            item.type == "Sale"
+              ? percetageCalculate(
+                  item.taxRate,
+                  Number(item.quantity * item.price)
+                )
+              : percetageCalculate(
+                  item.taxRate,
+                  Number((item.quantity * productTotalPrice).toFixed(2))
+                ), // Final calculation with toFixed after
         };
       }),
       vattotalPrice: deliveryData.products.reduce(

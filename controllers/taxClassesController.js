@@ -1,3 +1,4 @@
+const Product = require("../models/productModel");
 const taxClassesModel = require("../models/taxClassesModel");
 
 // Controller to add a new tax class
@@ -244,6 +245,17 @@ const deleteTaxClass = async (req, res) => {
   try {
     const { _id: vendorId } = req.user;
     const { id } = req.params;
+
+    const taxClassExist = await Product.findOne({
+      taxClass: id,
+    });
+
+    if (taxClassExist) {
+      return res.status(400).json({
+        success: false,
+        message: "Tax class in use, cannot delete.",
+      });
+    }
 
     const deletedTaxClass = await taxClassesModel.findOneAndDelete({
       _id: id,

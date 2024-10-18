@@ -9,7 +9,7 @@ const itemsSchema = new Schema(
     status: { type: String },
     // rate schema detail
     rateEngine: { type: String },
-    taxRate: { type: Number },
+    taxRate: { type: Number, default: 0 },
     Day1: { type: String },
     Day2: { type: String },
     Day3: { type: String },

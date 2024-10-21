@@ -584,7 +584,7 @@ const allocateOrderProducts = async (req, res) => {
 };
 
 const bookOrderInvoice = async (req, res) => {
-  const { orderId, productIds = [], reference, bookDate } = req.body;
+  const { orderId, productIds = [], reference, bookDate, charging } = req.body;
 
   const { _id: vendorId } = req.user;
 
@@ -622,6 +622,7 @@ const bookOrderInvoice = async (req, res) => {
         customerId: order.customerId,
         invoiceRefrence: reference,
         bookDate: bookDate ?? new Date(),
+        charging: charging,
       });
 
       const results = await invoice.save();
@@ -813,7 +814,9 @@ const generateOrderNote = async (req, res) => {
 
     const chargingStart = deliveryData.orderDetails.chargingStartDate;
     const bookDateStart = deliveryData.bookDate ?? deliveryData.returnDate;
-    console.log({ deliveryData });
+    const collectionChargeAmount =
+      deliveryData.collectionCharge ?? deliveryData.deliveryCharge;
+    console.log({ collectionChargeAmount });
     const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
     const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
     console.log({ daysCount, totalDaysCount });
@@ -858,6 +861,7 @@ const generateOrderNote = async (req, res) => {
       customerPostCode: deliveryData.customerDetails.postCode,
       customerEmail: deliveryData.customerDetails.email,
       orderId: deliveryData.orderDetails.orderId,
+      collectionChargeAmount: collectionChargeAmount,
       orderType: deliveryData.deliveryNote,
       orderNumber: deliveryData.orderDetails.orderId,
       deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
@@ -950,7 +954,7 @@ const generateOrderNote = async (req, res) => {
 
     // Updating the totalPrice in the data object
     invoiceData.totalPrice = sumTotalPriceVAT;
-    invoiceData.vattotalPrice = sumTotalPrice;
+    invoiceData.vattotalPrice = collectionChargeAmount + Number(sumTotalPrice);
     invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
 
     const isQuickBookAccountExist = vender.isQuickBook;
@@ -1063,6 +1067,9 @@ const invoicePDF = async (req, res) => {
     ]);
     const chargingStart = deliveryData.orderDetails.chargingStartDate;
     const bookDateStart = deliveryData.bookDate ?? deliveryData.returnDate;
+    const collectionChargeAmount =
+      deliveryData.collectionCharge ?? deliveryData.deliveryCharge;
+    console.log({ collectionChargeAmount });
     console.log({ deliveryData });
     const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
     const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
@@ -1107,6 +1114,14 @@ const invoicePDF = async (req, res) => {
       customerCity: deliveryData.customerDetails.city,
       customerCountry: deliveryData.customerDetails.country,
       customerPostCode: deliveryData.customerDetails.postCode,
+      collectionChargeAmount:
+        collectionChargeAmount != 0
+          ? `A delivery fee of $${collectionChargeAmount} may apply, based on your location and order details.`
+          : "",
+      collectionCharge:
+        collectionChargeAmount != 0
+          ? `A collection fee of $${collectionChargeAmount} may apply, based on your location and order details.`
+          : "",
       customerEmail: deliveryData.customerDetails.email,
       orderId: deliveryData.orderDetails.orderId,
       orderType: deliveryData.deliveryNote,
@@ -1153,7 +1168,6 @@ const invoicePDF = async (req, res) => {
           minimumRentailPeriod
         ).remainingDays;
 
-        console.log({ productTotalPrice });
         return {
           productName: item.productName,
           quantity: item.quantity,
@@ -1206,7 +1220,7 @@ const invoicePDF = async (req, res) => {
 
     // Updating the totalPrice in the data object
     invoiceData.totalPrice = sumTotalPriceVAT;
-    invoiceData.vattotalPrice = sumTotalPrice;
+    invoiceData.vattotalPrice = collectionChargeAmount + Number(sumTotalPrice);
     invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
     const isInvoiceBookIn = invoiceData.invoiceNumber;
     // Load and compile HTML template
@@ -1502,7 +1516,7 @@ const invoicePDF = async (req, res) => {
 // };
 
 const handleOrderBooking = async (req, res, type) => {
-  const { orderId, productIds = [], reference, bookDate } = req.body;
+  const { orderId, productIds = [], reference, bookDate, charging } = req.body;
   const vendorId = req.user._id;
 
   const NoteModel = type === "bookOut" ? DeliverNote : ReturnNote;
@@ -1538,6 +1552,8 @@ const handleOrderBooking = async (req, res, type) => {
       products: updatedProducts,
       reference,
       [`${type === "bookOut" ? "bookDate" : "returnDate"}`]: bookDate,
+      [`${type === "bookOut" ? "deliveryCharge" : "collectionCharge"}`]:
+        charging,
       [`${type === "bookOut" ? "deliveryNote" : "returnNote"}`]:
         await generateAlphanumericId(vendorId, noteType),
     });

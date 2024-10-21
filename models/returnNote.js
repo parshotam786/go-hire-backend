@@ -18,6 +18,7 @@ const ReturnNoteSchema = new mongoose.Schema(
     },
 
     products: { type: [itemsSchema], default: [] },
+    collectionCharge: { type: Number },
 
     refrence: { type: String },
     returnDate: {

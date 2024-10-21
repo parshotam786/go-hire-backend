@@ -20,6 +20,7 @@ const DeliverNoteSchema = new mongoose.Schema(
     products: { type: [itemsSchema], default: [] },
 
     refrence: { type: String },
+    deliveryCharge: { type: Number },
     bookDate: {
       type: Date,
       default: Date.now(),

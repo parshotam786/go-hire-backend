@@ -14,11 +14,9 @@ const authenticateUser = async (req, res, next) => {
     const decoded = jwt.verify(token, "your_jwt_secret");
 
     req.user = await venderModel.findById(decoded?._id); // Attach user data to the request object
-    // console.log('req',req.user)
 
     next(); // Proceed to the next middleware or route handler
   } catch (error) {
-    console.log("eror", error);
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({ message: "Invalid token" });
     } else if (error.response && error.response.status === 401) {

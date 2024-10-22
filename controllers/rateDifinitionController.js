@@ -52,7 +52,6 @@ const createRateDefinition = async (req, res) => {
     const savedRateDefinition = await rateDefinition.save();
 
     // Log the saved rate definition
-    console.log("Saved rate definition:", savedRateDefinition);
 
     // Send response
     return res.status(201).json({

@@ -816,10 +816,9 @@ const generateOrderNote = async (req, res) => {
     const bookDateStart = deliveryData.bookDate ?? deliveryData.returnDate;
     const collectionChargeAmount =
       deliveryData.collectionCharge ?? deliveryData.deliveryCharge;
-    console.log({ collectionChargeAmount });
+
     const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
     const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
-    console.log({ daysCount, totalDaysCount });
 
     if (!deliveryData) {
       return errorResponse(res, { message: "No data found" });
@@ -906,7 +905,6 @@ const generateOrderNote = async (req, res) => {
           minimumRentailPeriod
         ).remainingDays;
 
-        console.log({ productTotalPrice });
         return {
           productName: item.productName,
           quantity: item.quantity,
@@ -958,7 +956,10 @@ const generateOrderNote = async (req, res) => {
     invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
 
     const isQuickBookAccountExist = vender.isQuickBook;
+    const totalPrice = collectionChargeAmount + Number(sumTotalPrice);
 
+    // Update the ReturnNote's totalPrice field
+    await Model.findByIdAndUpdate(id, { totalPrice });
     if (
       isQuickBookAccountExist &&
       deliveryData.orderDetails.cunstomerQuickbookId != null &&
@@ -991,7 +992,7 @@ const generateOrderNote = async (req, res) => {
         },
         DueDate: "2024-09-01", // Invoice due date
         TotalAmt: deliveryData.products.reduce(
-          (total, item) => total + item.price * item.quantity, // Sum up all dynamically calculated amounts
+          (total, item) => total + item.price * item.quantity,
           0
         ),
       };
@@ -1069,11 +1070,8 @@ const invoicePDF = async (req, res) => {
     const bookDateStart = deliveryData.bookDate ?? deliveryData.returnDate;
     const collectionChargeAmount =
       deliveryData.collectionCharge ?? deliveryData.deliveryCharge;
-    console.log({ collectionChargeAmount });
-    console.log({ deliveryData });
     const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
     const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
-    console.log({ daysCount, totalDaysCount });
 
     if (!deliveryData) {
       return res.status(404).json({ message: "No data found" });
@@ -1609,7 +1607,6 @@ const handleOrderBooking = async (req, res, type) => {
       },
     });
   } catch (error) {
-    console.log(error);
     return errorResponse(res, { message: error?.message || "Server Error!" });
   }
 };
@@ -1956,7 +1953,6 @@ const invoiceByVendorId = async (req, res) => {
 
           try {
             await transporter.sendMail(mailOptions);
-            console.log(`Email sent to ${customerEmail}`);
           } catch (error) {
             console.error(`Error sending email to ${customerEmail}:`, error);
           }

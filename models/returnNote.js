@@ -16,7 +16,10 @@ const ReturnNoteSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vender",
     },
-
+    totalPrice: {
+      type: Number,
+      default: 0,
+    },
     products: { type: [itemsSchema], default: [] },
     collectionCharge: { type: Number },
 

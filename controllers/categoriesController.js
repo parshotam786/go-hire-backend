@@ -10,7 +10,6 @@ const getAllCategory = async (req, res) => {
       parentId: null,
     });
 
-    console.log("Categories found:", categories.length, categories);
     res.json(categories);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -19,13 +18,11 @@ const getAllCategory = async (req, res) => {
 const getAllSubCategory = async (req, res) => {
   try {
     const parentId = req.query.parentId;
-    console.log("Querying categories with parentId:", parentId);
     const categories = await Category.find({
       isActive: true,
       parentId: parentId,
     });
 
-    console.log("Categories found:", categories.length, categories);
     res.json(categories);
   } catch (err) {
     res.status(500).json({ message: err.message });

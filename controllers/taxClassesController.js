@@ -14,7 +14,6 @@ const addTaxClass = async (req, res) => {
       taxRate,
     } = req.body;
     const { _id: vendorId } = req.user;
-    console.log(vendorId);
     // Check for required fields
     if (!name) {
       return res.status(400).json({ message: "Name required." });

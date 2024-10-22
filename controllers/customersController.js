@@ -150,10 +150,7 @@ const addCustomer = async (req, res) => {
           try {
             customer.customerID = qbCustomer.Id;
             await customer.save();
-            console.log(
-              "Customer created in QuickBooks successfully:",
-              qbCustomer.Id
-            );
+
             return res.status(201).json({
               message: "Customer created successfully in QuickBooks",
               success: true,

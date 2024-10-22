@@ -13,7 +13,6 @@ const qucikBookAuth = async (req, res) => {
     scope: [OAuthClient.scopes.Accounting, OAuthClient.scopes.OpenId],
     state: "Init",
   });
-  console.log("auth", { authUri });
   req.session.redirectURL = req.query.redirctURL;
   req.session.userId = req.query.vendorId;
 
@@ -21,15 +20,11 @@ const qucikBookAuth = async (req, res) => {
 };
 
 const quickbookCallback = async (req, res) => {
-  console.log(req.url);
   const parseRedirect = req.url;
 
   const vendorId = req.session.userId;
-  console.log(vendorId, "venodr");
   try {
-    console.log("before response");
     const authResponse = await oauthClient.createToken(parseRedirect);
-    console.log(authResponse.token, "showAuth");
 
     const realmId = authResponse.token.realmId;
     const access_token = authResponse.token.access_token;
@@ -73,7 +68,6 @@ const quickbookCallback = async (req, res) => {
     //   message: "You are connected to QuickBooks",
     // });
   } catch (error) {
-    console.log("Error during token creation:", error);
     res.status(500).send("Authentication failed");
   }
 };

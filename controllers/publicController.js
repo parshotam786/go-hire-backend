@@ -11,12 +11,9 @@ exports.getAllFilterDataWithType = async (req, res) => {
   req.body.page = req.body.page ?? 1;
 
   if (!type) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Type is required, e.g:product, all-vendor, verified-manufacture",
-      });
+    return res.status(400).json({
+      error: "Type is required, e.g:product, all-vendor, verified-manufacture",
+    });
   }
   let filters = {
     // Product Filters
@@ -53,8 +50,6 @@ exports.getAllFilterDataWithType = async (req, res) => {
     }),
   };
   if (type == "product") {
-    console.log("fi", filters);
-
     data = await Product.find(filters);
     totalRecords = await Product.countDocuments(filters);
   } else if (type == "all-vendor") {

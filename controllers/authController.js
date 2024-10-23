@@ -115,7 +115,6 @@ const VenderRegister = async (req, res) => {
     });
 
     const vendor = await newVender.save();
-    console.log(vendor);
     const vendorId = new mongoose.Types.ObjectId(vendor._id);
 
     const documents = [

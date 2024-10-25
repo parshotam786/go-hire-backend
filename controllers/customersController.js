@@ -216,7 +216,8 @@ const getCustomer = async (req, res) => {
 
     const customers = await Customer.find(query)
       .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .populate(["invoiceRunCode", "paymentTerm"]);
 
     const totalCustomers = await Customer.countDocuments(query);
 

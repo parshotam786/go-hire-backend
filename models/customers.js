@@ -76,10 +76,14 @@ const CustomersSchema = new mongoose.Schema({
     type: String,
   },
   invoiceRunCode: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "InvoiceRunCode",
   },
   paymentTerm: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "PaymentTerm",
   },
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,

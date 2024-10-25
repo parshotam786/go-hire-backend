@@ -38,8 +38,16 @@ const orderSchema = new mongoose.Schema(
     depot: { type: String, default: "" },
     salesPerson: { type: String, default: "" },
     orderedBy: { type: String, default: "" },
-    invoiceRunCode: { type: String, default: "" },
-    paymentTerm: { type: String, default: "" },
+    invoiceRunCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "InvoiceRunCode",
+    },
+    paymentTerm: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "PaymentTerm",
+    },
     billingPeriod: { type: String, default: "" },
     products: { type: [itemsSchema], default: [] },
     status: {

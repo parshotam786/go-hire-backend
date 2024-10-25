@@ -45,6 +45,17 @@ app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/order", authenticateUser, require("./routes/orderRoutes"));
 app.use("/api/imports", authenticateUser, require("./routes/importBilkData"));
 app.use(
+  "/api/payment-terms",
+  authenticateUser,
+  require("./routes/paymentTermsRoutes")
+);
+app.use(
+  "/api/invoice-run-code",
+  authenticateUser,
+  require("./routes/invoiceRunCodeRoutes")
+);
+app.use("/api", authenticateUser, require("./routes/listofValueRoutes"));
+app.use(
   "/api/rate-definition",
   authenticateUser,
   require("./routes/rateDifinitionRoutes")

@@ -20,6 +20,12 @@ const ReturnNoteSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    paymentTerms: {
+      type: Number,
+    },
+    invoiceRunCode: {
+      type: String,
+    },
     products: { type: [itemsSchema], default: [] },
     collectionCharge: { type: Number },
 

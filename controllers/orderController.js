@@ -145,14 +145,24 @@ const generateAlphanumericId = async (vendorId, type = "Order") => {
 
 const getOrder = async (req, res) => {
   // const findOrder = await Order.find({ orderId: req.params?.id })
-  const findOrder = await Order.findById(req.params?.id).populate(
-    "products.product"
-  );
-
+  const findOrder = await Order.findById(req.params?.id)
+    .populate(["products.product", "invoiceRunCode", "paymentTerm"])
+    .lean();
+  // const invoiceRunId = findOrder.invoiceRunCode._id;
+  // const invoiceRunCodeName = findOrder.invoiceRunCode.name;
+  // const invoiceRunCode = findOrder.invoiceRunCode.code;
+  // const paymentTermDays = findOrder.paymentTerm.days;
+  // findOrder.invoiceRunCode = invoiceRunCode;
+  // findOrder.invoiceRunId = invoiceRunId;
+  // findOrder.invoiceRunCodeName = invoiceRunCodeName;
+  // findOrder.paymentTermDays = paymentTermDays;
   if (!findOrder) {
     return res.status(404).json({ error: "Order not found" });
   }
-  return res.status(200).json({ data: findOrder, success: true });
+  return res.status(200).json({
+    data: findOrder,
+    success: true,
+  });
 };
 
 // Get all order - Paginations
@@ -299,7 +309,7 @@ const addProductInOrder = async (req, res) => {
         { _id: orderId },
         { $addToSet: { products: { ...rest, status: "reserved" } } },
         { new: true }
-      ).populate("products.product");
+      ).populate(["products.product", "invoiceRunCode", "paymentTerm"]);
       if (updated) {
         return res.status(200).json({ data: updated });
       }
@@ -584,7 +594,15 @@ const allocateOrderProducts = async (req, res) => {
 };
 
 const bookOrderInvoice = async (req, res) => {
-  const { orderId, productIds = [], reference, bookDate, charging } = req.body;
+  const {
+    orderId,
+    productIds = [],
+    reference,
+    bookDate,
+    charging,
+    paymentTerms,
+    invoiceRunCode,
+  } = req.body;
 
   const { _id: vendorId } = req.user;
 
@@ -623,6 +641,8 @@ const bookOrderInvoice = async (req, res) => {
         invoiceRefrence: reference,
         bookDate: bookDate ?? new Date(),
         charging: charging,
+        paymentTerms: Number(paymentTerms),
+        invoiceRunCode: invoiceRunCode,
       });
 
       const results = await invoice.save();
@@ -1514,7 +1534,15 @@ const invoicePDF = async (req, res) => {
 // };
 
 const handleOrderBooking = async (req, res, type) => {
-  const { orderId, productIds = [], reference, bookDate, charging } = req.body;
+  const {
+    orderId,
+    productIds = [],
+    reference,
+    bookDate,
+    charging,
+    invoiceRunCode,
+    paymentTerms,
+  } = req.body;
   const vendorId = req.user._id;
 
   const NoteModel = type === "bookOut" ? DeliverNote : ReturnNote;
@@ -1542,13 +1570,19 @@ const handleOrderBooking = async (req, res, type) => {
       ...prd.toObject(),
       status: productStatus,
     }));
-
     const note = new NoteModel({
       customerId: order.customerId,
       orderId: order._id,
       vendorId,
       products: updatedProducts,
       reference,
+      invoiceRunCode: invoiceRunCode,
+      paymentTerms: Number(paymentTerms),
+
+      // [`${type === "bookOut" ? "invoiceRunCode" : "invoiceRunCode"}`]:
+      //   invoiceRunCode,
+      // [`${type === "bookOut" ? "paymentTerm" : "paymentTerm"}`]:
+      //   Number(paymentTerm),
       [`${type === "bookOut" ? "bookDate" : "returnDate"}`]: bookDate,
       [`${type === "bookOut" ? "deliveryCharge" : "collectionCharge"}`]:
         charging,

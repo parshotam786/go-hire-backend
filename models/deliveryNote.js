@@ -16,6 +16,12 @@ const DeliverNoteSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vender",
     },
+    paymentTerms: {
+      type: Number,
+    },
+    invoiceRunCode: {
+      type: String,
+    },
 
     products: { type: [itemsSchema], default: [] },
 

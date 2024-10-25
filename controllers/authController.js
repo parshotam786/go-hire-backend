@@ -9,6 +9,7 @@ const Product = require("../models/productModel");
 const Documents = require("../models/documentNumber");
 const { errorResponse, successResponse } = require("../utiles/responses");
 const { default: mongoose } = require("mongoose");
+const ListValue = require("../models/listOfValues");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -210,6 +211,34 @@ const VenderRegister = async (req, res) => {
       },
     ];
     await Documents.insertMany(documents);
+
+    const listValue = [
+      {
+        vendorId: vendorId,
+        name: "Payment Term Period Type",
+        parentId: null,
+        isActive: true,
+      },
+      {
+        vendorId: vendorId,
+        name: "Contact Type",
+        parentId: null,
+        isActive: true,
+      },
+      {
+        vendorId: vendorId,
+        name: "Invoice Status",
+        parentId: null,
+        isActive: true,
+      },
+      {
+        vendorId: vendorId,
+        name: "Payment Method Type",
+        parentId: null,
+        isActive: true,
+      },
+    ];
+    await ListValue.insertMany(listValue);
     res
       .status(201)
       .send({ success: true, message: "Vender registered successfully" });

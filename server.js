@@ -60,6 +60,7 @@ app.use(
   authenticateUser,
   require("./routes/rateDifinitionRoutes")
 );
+app.use("/api/invoice", authenticateUser, require("./routes/invoiceBatches"));
 app.use("/api/document", authenticateUser, require("./routes/documentRoutes"));
 app.use(
   "/api/tax-classes",

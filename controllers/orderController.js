@@ -20,6 +20,7 @@ const fs = require("fs");
 const Handlebars = require("handlebars");
 const moment = require("moment/moment");
 const path = require("path");
+const invoiceBatches = require("../models/invoiceBatches");
 
 function countWeekdaysBetweenDates(date1, date2) {
   const start = new Date(date1);
@@ -96,44 +97,6 @@ const percetageCalculate = (taxRate, price) => {
   let percentage = (taxRate / 100) * price;
   return percentage + price;
 };
-const percetageCalculateVat = (taxRate, price) => {
-  let percentage = (taxRate / 100) * price;
-  return percentage;
-};
-
-// monthly rate engin
-// function calculateProductPrice(date1, date2, monthlyPrice) {
-//   const startDate = new Date(date1);
-//   const endDate = new Date(date2);
-
-//   // Calculate the time difference in milliseconds
-//   const timeDifference = endDate - startDate;
-
-//   // Convert time difference from milliseconds to days
-//   const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
-
-//   // Determine the number of full months and remaining days
-//   const fullMonths = Math.floor(daysDifference / 30);
-//   const remainingDays = daysDifference % 30;
-
-//   // Calculate the daily price (assuming a 30-day month)
-//   const dailyPrice = monthlyPrice / 30;
-
-//   // Calculate the total price
-//   const totalPrice = (fullMonths * monthlyPrice) + (remainingDays * dailyPrice);
-
-//   return totalPrice.toFixed(2); // Rounded to two decimal places
-// }
-
-// function sumArrayUpToIndex(arr, index) {
-//   // Check if the index is within the bounds of the array
-//   if (index < 0 || index >= arr.length) {
-//     throw new Error("Index is out of bounds");
-//   }
-
-//   // Sum the elements of the array up to the specified index
-//   return arr.slice(0, index + 1).reduce((acc, val) => acc + val, 0);
-// }
 
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
@@ -974,9 +937,9 @@ const generateOrderNote = async (req, res) => {
     invoiceData.totalPrice = sumTotalPriceVAT;
     invoiceData.vattotalPrice = collectionChargeAmount + Number(sumTotalPrice);
     invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
+    const totalPrice = collectionChargeAmount + Number(sumTotalPrice);
 
     const isQuickBookAccountExist = vender.isQuickBook;
-    const totalPrice = collectionChargeAmount + Number(sumTotalPrice);
 
     // Update the ReturnNote's totalPrice field
     await Model.findByIdAndUpdate(id, { totalPrice });
@@ -2012,6 +1975,166 @@ const createPdf = async (html) => {
   await browser.close();
   return pdfBuffer;
 };
+
+const getOrdersOnRent = async (req, res) => {
+  const vendorId = req.user._id;
+  const {
+    name,
+    description,
+    invoiceRunCode,
+    invoiceStartDate,
+    invoiceUptoDate,
+  } = req.body;
+  if (!vendorId) {
+    return res.status(404).json({ message: "Vendor not found" });
+  }
+
+  try {
+    const orders = await Order.find({
+      vendorId: vendorId,
+      "products.status": "onrent",
+      chargingStartDate: {
+        $gte: new Date(invoiceStartDate),
+        $lte: new Date(invoiceUptoDate),
+      },
+    })
+      .populate(
+        invoiceRunCode == ""
+          ? ""
+          : {
+              path: "invoiceRunCode",
+              match: { code: invoiceRunCode },
+            }
+      )
+      .populate("products.product");
+
+    const filteredOrders = orders.filter((order) => order.invoiceRunCode);
+
+    if (!filteredOrders.length) {
+      return res.status(404).json({ message: "No matching orders found" });
+    }
+    const filterData = filteredOrders.map((element) => {
+      const chargingStart = element.chargingStartDate;
+      const bookDateStart = new Date(invoiceUptoDate);
+      const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
+      const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+      console.log({ daysCount, totalDaysCount });
+
+      return {
+        id: element._id,
+        // chargingStartDate: element.chargingStartDate,
+        // totalDaysCount: totalDaysCount,
+        // daysCount: daysCount,
+        product: element.products
+          .filter((item) => item.status === "onrent")
+          .map((item) => {
+            const days = [
+              Number(item.Day1),
+              Number(item.Day2),
+              Number(item.Day3),
+              Number(item.Day4),
+              Number(item.Day5),
+              Number(item.Day6),
+            ];
+
+            const daysInWeek = Number(item?.rentalDaysPerWeek);
+            const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+            const productTotalPrice = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).totalPrice;
+            const fullWeeks = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).fullWeeks;
+            const remainingDays = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).remainingDays;
+
+            return {
+              // productName: item.productName,
+              // quantity: item.quantity,
+              // type: item.status,
+              // weeks: fullWeeks,
+              // days: remainingDays,
+              // vat: item.taxRate,
+              // price: item.price,
+              // minimumRentalPeriod: minimumRentailPeriod,
+              // vatTotal:
+              //   item.type == "Sale"
+              //     ? Number(item.quantity * item.price)
+              //     : Number((item.quantity * productTotalPrice).toFixed(2)),
+              total:
+                item.type == "Sale"
+                  ? percetageCalculate(
+                      item.taxRate,
+                      Number(item.quantity * item.price)
+                    )
+                  : percetageCalculate(
+                      item.taxRate,
+                      Number((item.quantity * productTotalPrice).toFixed(2))
+                    ),
+            };
+          }),
+      };
+    });
+    let totalPrice = 0;
+    filterData.filter((order) => {
+      const orderTotal = order.product.reduce(
+        (sum, item) => sum + item.total,
+        0
+      );
+      totalPrice += orderTotal;
+    });
+
+    const ids = filteredOrders.map((item) => item._id);
+    const totalInvoice = filteredOrders.length;
+    const batchNumber = await generateAlphanumericId(vendorId, "Batch Number");
+    const data = new invoiceBatches({
+      vendorId: vendorId,
+      name: name,
+      description,
+      batchNumber,
+      batchDate: moment().format("LLLL"),
+      totalInvoice,
+      orders: ids,
+      totalPrice,
+    });
+    await data.save();
+
+    if (!totalInvoice) {
+      return res
+        .status(404)
+        .json({ message: "No matching orders found", totalInvoice });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice run was successfully started.",
+      totalInvoice,
+      orders: ids,
+      totalPrice,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Error retrieving orders", error });
+  }
+};
+
 module.exports = {
   getOrder,
   createOrder,
@@ -2030,4 +2153,5 @@ module.exports = {
   generateOrderNote,
   invoicePDF,
   invoiceByVendorId,
+  getOrdersOnRent,
 };

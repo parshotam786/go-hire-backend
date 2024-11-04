@@ -474,9 +474,130 @@ const deleteInvoiceBatchById = async (req, res) => {
   }
 };
 
+const removeOrderFromInvoiceBatch = async (req, res) => {
+  const { invoiceBatchId, orderId } = req.params;
+  const { _id: vendorId } = req.user;
+
+  try {
+    // Find the invoice batch by ID and vendor ID to ensure ownership
+    const invoiceBatch = await invoiceBatches.findOne({
+      _id: invoiceBatchId,
+      vendorId: vendorId,
+    });
+
+    if (!invoiceBatch) {
+      return res
+        .status(404)
+        .json({ message: "Invoice batch not found or not authorized" });
+    }
+    console.log(
+      invoiceBatch.totalPrice,
+      invoiceBatch.tax,
+      invoiceBatch.totalInvoice
+    );
+    // Update by pulling the order from the orders array
+    const updatedInvoiceBatch = await invoiceBatches
+      .findByIdAndUpdate(
+        invoiceBatchId,
+        { $pull: { orders: orderId } },
+        { new: true }
+      )
+      .populate("orders");
+
+    const filterData = updatedInvoiceBatch.orders.map((element) => {
+      const chargingStart = element.chargingStartDate;
+      const bookDateStart = new Date(invoiceBatch.invoiceUptoDate);
+      const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
+      const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+      const productData = element.products
+        .filter((item) => item.status === "onrent")
+        .map((item) => {
+          const days = [
+            Number(item.Day1),
+            Number(item.Day2),
+            Number(item.Day3),
+            Number(item.Day4),
+            Number(item.Day5),
+            Number(item.Day6),
+          ];
+
+          const daysInWeek = Number(item?.rentalDaysPerWeek);
+          const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+          const productTotalPrice = calculateProductPrice(
+            item?.price,
+            daysCount,
+            totalDaysCount,
+            days,
+            daysInWeek,
+            minimumRentailPeriod
+          ).totalPrice;
+
+          return {
+            vatTotal:
+              item.type === "Sale"
+                ? Number(item.quantity * item.price)
+                : Number((item.quantity * productTotalPrice).toFixed(2)),
+            total:
+              item.type === "Sale"
+                ? percetageCalculate(
+                    item.taxRate,
+                    Number(item.quantity * item.price)
+                  )
+                : percetageCalculate(
+                    item.taxRate,
+                    Number((item.quantity * productTotalPrice).toFixed(2))
+                  ),
+          };
+        });
+
+      // Calculate the sum of vatTotal for each product in the current order
+      const goods = productData.reduce(
+        (acc, product) => acc + product.vatTotal,
+        0
+      );
+      const total = productData.reduce(
+        (acc, product) => acc + product.total,
+        0
+      );
+
+      return {
+        id: element._id,
+        invoiceDate: updatedInvoiceBatch.batchDate,
+        product: productData,
+        goods,
+        total,
+        tax: total - goods,
+        billingPlaceName: element.billingPlaceName,
+      };
+    });
+    const filterdataa = filterData;
+    console.log(
+      filterData,
+
+      "ddd"
+    );
+    invoiceBatch.totalInvoice = updatedInvoiceBatch.orders.length;
+    invoiceBatch.totalPrice = filterdataa.total;
+    invoiceBatch.tax = filterdataa.tax;
+    invoiceBatch.excludingTax = filterdataa.total - filterdataa.tax;
+    await invoiceBatch.save();
+    res.status(200).json({
+      message: "Order removed successfully from invoice batch",
+      data: updatedInvoiceBatch,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "An error occurred while removing the order",
+      error,
+    });
+  }
+};
+
 module.exports = {
   generateInvoiceBatchNumber,
   getAllInvoiveBatches,
   deleteInvoiceBatchById,
   getInvocieBatchById,
+  removeOrderFromInvoiceBatch,
 };

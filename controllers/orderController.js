@@ -98,6 +98,24 @@ const percetageCalculate = (taxRate, price) => {
   return percentage + price;
 };
 
+async function removeOrderFromAllBatches(orderId) {
+  try {
+    // Convert orderId to ObjectId
+    const orderObjectId = orderId;
+
+    // Update all documents to remove the order ID from the orders array
+    const result = await invoiceBatches.updateMany(
+      { orders: orderObjectId }, // Match documents where the order ID is present in the orders array
+      { $pull: { orders: orderObjectId } } // Remove the specified order ID from the orders array
+    );
+
+    console.log("Orders removed:", result.modifiedCount);
+    return result;
+  } catch (error) {
+    console.error("Error removing order from batches:", error);
+  }
+}
+
 const generateAlphanumericId = async (vendorId, type = "Order") => {
   const document = await Document.findOne({ name: type, vendorId });
   const uniqueId =
@@ -830,7 +848,9 @@ const generateOrderNote = async (req, res) => {
 
     deliveryData.products = mergedProducts;
     const vender = await venderModel.findById(vendorId);
-
+    if (type?.toUpperCase() === "RN") {
+      removeOrderFromAllBatches(`${deliveryData.orderDetails._id}`);
+    }
     const invoiceData = {
       brandLogo: vender.brandLogo,
       invoiceDate: moment(deliveryData.bookDate).format("l"),

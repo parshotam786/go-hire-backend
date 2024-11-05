@@ -432,6 +432,7 @@ const getInvocieBatchById = async (req, res) => {
         total,
         tax: total - goods,
         billingPlaceName: element.billingPlaceName,
+        status: invoiceData.status,
       };
     });
     res.status(200).json({
@@ -594,8 +595,46 @@ const removeOrderFromInvoiceBatch = async (req, res) => {
   }
 };
 
+const confrimInvoiceBatchStatus = async (req, res) => {
+  const { _id: vendorId } = req.user;
+
+  const { id, status } = req.body;
+  if (!id) {
+    return res
+      .status(404)
+      .send({ success: false, message: "Id is not provided" });
+  }
+  if (!status) {
+    return res
+      .status(404)
+      .send({ success: false, message: "Status field is empty!" });
+  }
+  try {
+    const InvoiceBatch = await invoiceBatches.findById({ vendorId, _id: id });
+
+    if (!InvoiceBatch) {
+      return res
+        .status(404)
+        .send({ success: false, message: "InvoiceBatch not found" });
+    }
+
+    InvoiceBatch.status = status;
+
+    const confrimInvoiceBatchStatus = await InvoiceBatch.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Status change successfully!",
+      confrimInvoiceBatchStatus,
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 module.exports = {
   generateInvoiceBatchNumber,
+  confrimInvoiceBatchStatus,
   getAllInvoiveBatches,
   deleteInvoiceBatchById,
   getInvocieBatchById,

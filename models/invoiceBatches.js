@@ -35,6 +35,10 @@ const InvoiceBatches = new mongoose.Schema(
     tax: {
       type: Number,
     },
+    status: {
+      type: String,
+      default: "Draft",
+    },
   },
   { timestamps: true }
 );

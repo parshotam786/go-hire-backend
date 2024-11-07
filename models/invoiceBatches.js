@@ -1,5 +1,42 @@
 const mongoose = require("mongoose");
 
+const ProductSchema = new mongoose.Schema({
+  productName: String,
+  quantity: String,
+  type: String,
+  weeks: String,
+  days: String,
+  vat: String,
+  price: String,
+  minimumRentalPeriod: String,
+  vatTotal: String,
+  total: String,
+});
+
+const OrderSchema = new mongoose.Schema({
+  id: mongoose.Schema.Types.ObjectId,
+  invoiceDate: String,
+  invoiceUptoDate: String,
+  deliveryAddress: String,
+  customerName: String,
+  customerAddress: String,
+  customerAddress2: String,
+  customerCity: String,
+  customerCountry: String,
+  customerEmail: String,
+  orderId: String,
+  orderNumber: String,
+  deliveryDate: String,
+  orderDate: String,
+  deliveryPlaceName: String,
+  billingPlaceName: String,
+  product: [ProductSchema],
+  goods: String,
+  total: String,
+  tax: String,
+  invocie: String,
+  status: String,
+});
 const InvoiceBatches = new mongoose.Schema(
   {
     vendorId: {
@@ -35,6 +72,7 @@ const InvoiceBatches = new mongoose.Schema(
     tax: {
       type: Number,
     },
+    invoices: [OrderSchema],
     status: {
       type: String,
       default: "Draft",

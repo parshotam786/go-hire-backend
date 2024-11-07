@@ -7,6 +7,9 @@ const {
   getInvocieBatchById,
   removeOrderFromInvoiceBatch,
   confrimInvoiceBatchStatus,
+  getInvoiceById,
+  invoicePrint,
+  postSingleInvoice,
 } = require("../controllers/invoiceBatches");
 
 router.post("/invoice-run", generateInvoiceBatchNumber);
@@ -18,6 +21,9 @@ router.delete(
 );
 
 router.get("/invoice-batches/:id", getInvocieBatchById);
+router.post("/invoice-view", getInvoiceById);
+router.post("/invoice-print", invoicePrint);
+router.post("/invoice-post", postSingleInvoice);
 router.put("/invoice-status", confrimInvoiceBatchStatus);
 
 module.exports = router;

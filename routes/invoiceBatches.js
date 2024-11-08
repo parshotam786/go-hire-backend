@@ -10,6 +10,8 @@ const {
   getInvoiceById,
   invoicePrint,
   postSingleInvoice,
+  postMulipleInvoice,
+  confrimInvoice,
 } = require("../controllers/invoiceBatches");
 
 router.post("/invoice-run", generateInvoiceBatchNumber);
@@ -24,6 +26,8 @@ router.get("/invoice-batches/:id", getInvocieBatchById);
 router.post("/invoice-view", getInvoiceById);
 router.post("/invoice-print", invoicePrint);
 router.post("/invoice-post", postSingleInvoice);
+router.post("/invoice-post-all", postMulipleInvoice);
 router.put("/invoice-status", confrimInvoiceBatchStatus);
+router.post("/invoice-confirmed", confrimInvoice);
 
 module.exports = router;

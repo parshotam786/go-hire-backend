@@ -84,6 +84,7 @@ const CustomersSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "PaymentTerm",
+    default: "",
   },
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,

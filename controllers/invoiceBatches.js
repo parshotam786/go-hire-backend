@@ -46,7 +46,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
       vendorId: vendorId,
       "products.status": "onrent",
       chargingStartDate: {
-        $gte: new Date(invoiceStartDate),
+        // $gte: new Date(invoiceStartDate),
         $lte: new Date(invoiceUptoDate),
       },
     })
@@ -63,7 +63,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
     const filteredOrders = orders.filter((order) => order.invoiceRunCode);
 
     if (!filteredOrders.length) {
-      return res.status(404).json({ message: "No matching orders found" });
+      return res.status(404).json({ message: "No matching invocies found" });
     }
 
     const vender = await venderModel.findById(vendorId);
@@ -771,7 +771,6 @@ const getInvoiceById = async (req, res) => {
   try {
     const { id, invoiceId } = req.body;
 
-    // Find the InvoiceBatch by its ID
     const invoiceBatch = await invoiceBatches.findById(id).populate({
       path: "orders",
       populate: [{ path: "products.product" }, { path: "customerId" }],
@@ -781,8 +780,6 @@ const getInvoiceById = async (req, res) => {
       return res.status(404).json({ message: "Invoice Batch not found" });
     }
 
-    // // Find the specific invoice within the invoices array
-    // const invoice = invoiceBatch.invoices.id(invoiceId);
     const filterInvoice = invoiceBatch.invoices.filter(
       (item) => item.id == invoiceId
     );
@@ -986,11 +983,11 @@ const postMulipleInvoice = async (req, res) => {
         .send({ success: false, message: "InvoiceBatch not found" });
     }
     const isDraftInvocie = invoiceStatus.invoices.filter(
-      (item) => item.status == "Draft"
+      (item) => item.status == "Draft" || item.status === "Confirmed"
     );
 
-    if (isDraftInvocie.length > 0) {
-      for await (let invoice of isDraftInvocie) {
+    for await (let invoice of isDraftInvocie) {
+      if (invoice.status == "Draft") {
         const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
 
         await Document.findOneAndUpdate(
@@ -1001,15 +998,18 @@ const postMulipleInvoice = async (req, res) => {
         invoice.invocie = batchNumber;
 
         invoice.status = "Posted";
-      }
-    } else {
-      for (let invoice of invoiceStatus.invoices) {
+      } else {
         invoice.status = "Posted";
       }
     }
+
+    //  else {
+    //   for (let invoice of invoiceStatus.invoices) {
+    //     invoice.status = "Posted";
+    //   }
+    // }
     invoiceStatus.status = "Posted";
     await invoiceStatus.save();
-
     const vender = await venderModel.findById(vendorId);
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -1023,8 +1023,6 @@ const postMulipleInvoice = async (req, res) => {
       invoiceBatch.invoices.map(async (invoice) => {
         const customerEmail = invoice.customerEmail;
         if (customerEmail) {
-          // Read and compile the Handlebars template
-
           const templatePath = path.join(__dirname, "invoicePrint.html");
           const templateHtml = fs.readFileSync(templatePath, "utf8");
           const template = Handlebars.compile(templateHtml);
@@ -1071,7 +1069,6 @@ const postMulipleInvoice = async (req, res) => {
             vatTotal: invoice.tax,
           };
 
-          // Create HTML content by passing data to the template
           const htmlContent = template(invoiceData);
 
           const pdfBuffer = await createPdf(htmlContent);
@@ -1148,12 +1145,10 @@ const confrimInvoiceBatchStatus = async (req, res) => {
       invoice.status = status;
       invoice.invocie = batchNumber;
     }
-    // Save the updated InvoiceBatch
-    // await InvoiceBatch.save();
+
     InvoiceBatch.status = status;
 
     const confrimInvoiceBatchStatus = await InvoiceBatch.save();
-
     res.status(200).json({
       success: true,
       message: "Status change successfully!",
@@ -1204,7 +1199,6 @@ const invoicePrint = async (req, res) => {
     const { id, invoiceId } = req.body;
     const vender = await venderModel.findById(vendorId);
 
-    // Find the InvoiceBatch by its ID
     const invoiceBatch = await invoiceBatches.findById(id).populate({
       path: "orders",
       populate: [{ path: "products.product" }, { path: "customerId" }],
@@ -1213,8 +1207,7 @@ const invoicePrint = async (req, res) => {
     if (!invoiceBatch) {
       return res.status(404).json({ message: "Invoice Batch not found" });
     }
-    // // Find the specific invoice within the invoices array
-    // const invoice = invoiceBatch.invoices.id(invoiceId);
+
     const filterInvoice = invoiceBatch.invoices.filter(
       (item) => item.id == invoiceId
     );
@@ -1268,13 +1261,11 @@ const invoicePrint = async (req, res) => {
       vatTotal: invoiceDetail.tax,
     };
 
-    // Load and compile HTML template
     const templatePath = path.join(__dirname, "invoicePrint.html");
     const templateHtml = fs.readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);
 
-    // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
       args: [
         "--no-sandbox",
@@ -1302,7 +1293,6 @@ const invoicePrint = async (req, res) => {
     });
     await browser.close();
 
-    // Schedule file deletion after 1 minute (60000 ms)
     setTimeout(() => {
       fs.unlink(pdfPath, (err) => {
         if (err) {
@@ -1311,12 +1301,112 @@ const invoicePrint = async (req, res) => {
           console.log(`Successfully deleted file: ${pdfPath}`);
         }
       });
-    }, 3000); // 1 minute
+    }, 3000);
     const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-    // Send back the URL for the PDF
     const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
     res.json({ url: pdfUrl });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error!" });
+  }
+};
+const multipleInvoicePrint = async (req, res) => {
+  const { _id: vendorId } = req.user;
+  try {
+    const { id } = req.body;
+    const vendor = await venderModel.findById(vendorId);
+
+    const invoiceBatch = await invoiceBatches.findById(id).populate({
+      path: "orders",
+      populate: [{ path: "products.product" }, { path: "customerId" }],
+    });
+
+    if (!invoiceBatch) {
+      return res.status(404).json({ message: "Invoice Batch not found" });
+    }
+
+    const invoiceData = invoiceBatch.invoices.map((item) => ({
+      brandLogo: vendor.brandLogo,
+      invoiceDate: item.invoiceDate,
+      invoiceNumber: item.invocie,
+      deliveryAddress: item.deliveryAddress,
+      customerName: item.customerName,
+      customerAddress: item.customerAddress,
+      customerCity: item.customerCity,
+      customerCountry: item.customerCountry,
+      customerPostCode: "",
+      customerEmail: item.customerEmail,
+      orderId: item.orderId,
+      orderType: "item.deliveryNote",
+      orderNumber: item.orderNumber,
+      deliveryDate: item.deliveryDate,
+      orderDate: item.orderDate,
+      deliveryPlaceName: item.deliveryPlaceName,
+      products: item.product.map((product) => ({
+        productName: product.productName,
+        quantity: product.quantity,
+        type: product.type,
+        days: product.days,
+        weeks: product.weeks,
+        minimumRentalPeriod: product.minimumRentalPeriod,
+        price: product.price,
+        vat: product.vat,
+        total: product.total,
+      })),
+      vattotalPrice: item.total,
+      totalPrice: item.goods,
+      vatTotal: item.tax,
+    }));
+
+    const templatePath = path.join(__dirname, "invoicePrint.html");
+    const templateHtml = fs.readFileSync(templatePath, "utf8");
+    const template = Handlebars.compile(templateHtml);
+
+    const html = template({ invoices: invoiceData });
+
+    const browser = await puppeteer.launch({
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--remote-debugging-port=9222",
+      ],
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pathname = `Invoice-${invoiceBatch.batchNumber}-${moment(
+      Date.now()
+    ).format("LLLL")}.pdf`;
+    const pdfPath = path.join(
+      __dirname.replace("/controllers", ""),
+      "pdfs",
+      pathname
+    );
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      scale: 0.8,
+      quality: 75,
+    });
+    await browser.close();
+
+    setTimeout(() => {
+      fs.unlink(pdfPath, (err) => {
+        if (err) {
+          console.error(`Failed to delete file: ${pdfPath}`, err);
+        } else {
+          console.log(`Successfully deleted file: ${pdfPath}`);
+        }
+      });
+    }, 30000);
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
+    res.json({ url: pdfUrl, name: invoiceBatch.name });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error!" });
@@ -1335,4 +1425,5 @@ module.exports = {
   postSingleInvoice,
   postMulipleInvoice,
   confrimInvoice,
+  multipleInvoicePrint,
 };

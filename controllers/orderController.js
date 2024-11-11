@@ -100,13 +100,11 @@ const percetageCalculate = (taxRate, price) => {
 
 async function removeOrderFromAllBatches(orderId) {
   try {
-    // Convert orderId to ObjectId
     const orderObjectId = orderId;
 
-    // Update all documents to remove the order ID from the orders array
     const result = await invoiceBatches.updateMany(
-      { orders: orderObjectId }, // Match documents where the order ID is present in the orders array
-      { $pull: { orders: orderObjectId } } // Remove the specified order ID from the orders array
+      { orders: orderObjectId },
+      { $pull: { orders: orderObjectId } }
     );
 
     console.log("Orders removed:", result.modifiedCount);
@@ -125,18 +123,10 @@ const generateAlphanumericId = async (vendorId, type = "Order") => {
 };
 
 const getOrder = async (req, res) => {
-  // const findOrder = await Order.find({ orderId: req.params?.id })
   const findOrder = await Order.findById(req.params?.id)
     .populate(["products.product", "invoiceRunCode", "paymentTerm"])
     .lean();
-  // const invoiceRunId = findOrder.invoiceRunCode._id;
-  // const invoiceRunCodeName = findOrder.invoiceRunCode.name;
-  // const invoiceRunCode = findOrder.invoiceRunCode.code;
-  // const paymentTermDays = findOrder.paymentTerm.days;
-  // findOrder.invoiceRunCode = invoiceRunCode;
-  // findOrder.invoiceRunId = invoiceRunId;
-  // findOrder.invoiceRunCodeName = invoiceRunCodeName;
-  // findOrder.paymentTermDays = paymentTermDays;
+
   if (!findOrder) {
     return res.status(404).json({ error: "Order not found" });
   }
@@ -146,29 +136,24 @@ const getOrder = async (req, res) => {
   });
 };
 
-// Get all order - Paginations
 const getAllOrders = async (req, res) => {
   try {
-    // Extract query parameters for pagination and search
-    const page = parseInt(req.query.page, 10) || 1; // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit, 10) || 30; // Default to 30 items per page if not provided
-    const searchQuery = req.query.search || ""; // Search query parameter
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 30;
+    const searchQuery = req.query.search || "";
 
-    // Build the search query object
     const searchCriteria = {
-      vendorId: req.user?._id, // Filter by vendorId from the authenticated user
+      vendorId: req.user?._id,
       $or: [
-        // Search within certain fields
-        { orderId: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on orderId
-        { account: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on account
-        { billingPlaceName: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on billingPlaceName
-        { address1: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on address1
-        { city: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on city
-        { country: { $regex: searchQuery, $options: "i" } }, // Case-insensitive search on country
+        { orderId: { $regex: searchQuery, $options: "i" } },
+        { account: { $regex: searchQuery, $options: "i" } },
+        { billingPlaceName: { $regex: searchQuery, $options: "i" } },
+        { address1: { $regex: searchQuery, $options: "i" } },
+        { city: { $regex: searchQuery, $options: "i" } },
+        { country: { $regex: searchQuery, $options: "i" } },
       ],
     };
 
-    // Fetch orders with pagination, search, and sorting
     const findOrders = await Order.find(searchCriteria)
       .populate(["products.product", "customerId"])
       .sort("-createdAt")
@@ -953,7 +938,6 @@ const generateOrderNote = async (req, res) => {
       .reduce((acc, product) => acc + product.vatTotal, 0)
       .toFixed(2);
 
-    // Updating the totalPrice in the data object
     invoiceData.totalPrice = sumTotalPriceVAT;
     invoiceData.vattotalPrice = collectionChargeAmount + Number(sumTotalPrice);
     invoiceData.vatTotal = (sumTotalPrice - sumTotalPriceVAT).toFixed(2);
@@ -961,20 +945,20 @@ const generateOrderNote = async (req, res) => {
 
     const isQuickBookAccountExist = vender.isQuickBook;
 
-    // Update the ReturnNote's totalPrice field
     await Model.findByIdAndUpdate(id, { totalPrice });
     if (
+      type?.toUpperCase() === "RN" &&
       isQuickBookAccountExist &&
       deliveryData.orderDetails.cunstomerQuickbookId != null &&
       deliveryData.orderDetails.cunstomerQuickbookId !== ""
     ) {
       const invoice = {
-        Line: deliveryData.products.map((item) => ({
+        Line: invoiceData.products.map((item) => ({
           Description: item.productName,
-          Amount: item.price * item.quantity,
+          Amount: item.total,
           DetailType: "SalesItemLineDetail",
           SalesItemLineDetail: {
-            UnitPrice: item.price,
+            UnitPrice: item.vattotalPrice,
             Qty: item.quantity,
           },
         })),
@@ -983,7 +967,7 @@ const generateOrderNote = async (req, res) => {
           name: deliveryData.customerDetails.name,
         },
         BillEmail: {
-          Address: deliveryData.customerDetails.email, // Customer's email
+          Address: invoiceData.customerEmail, // Customer's email
         },
         BillAddr: {
           Line1: deliveryData.customerDetails.addressLine1,
@@ -991,25 +975,22 @@ const generateOrderNote = async (req, res) => {
           PostalCode: deliveryData.customerDetails.postCode,
         },
         SalesTermRef: {
-          value: "1", // Payment terms (e.g., Net 30)
+          value: "1",
         },
-        DueDate: "2024-09-01", // Invoice due date
-        TotalAmt: deliveryData.products.reduce(
-          (total, item) => total + item.price * item.quantity,
-          0
-        ),
+        DueDate: "2024-09-01",
+        TotalAmt: invoiceData.vatTotal,
       };
       const existingRecord = await Quickbook.findOne({ vendorId });
       const qbo = new QuickBooks(
         process.env.CLIENT_ID,
         process.env.CLIENT_SECRET,
         existingRecord.accessToken,
-        false, // No token secret for OAuth2
+        false,
         existingRecord.realmId,
-        true, // use sandbox
-        true, // debug mode
+        true,
+        true,
         existingRecord.refreshToken,
-        "2.0" // OAuth version
+        "2.0"
       );
 
       qbo.createInvoice(invoice, function (err, invoice) {
@@ -1019,7 +1000,7 @@ const generateOrderNote = async (req, res) => {
           });
         } else {
           return successResponse(res, {
-            data: deliveryData,
+            data: invoiceData,
             message: "Invoice fetched successfully",
           });
         }
@@ -1278,244 +1259,6 @@ const invoicePDF = async (req, res) => {
   }
 };
 
-// const invoicePDF = async (req, res) => {
-//   const { id, type } = req.body;
-//   const vendorId = req.user._id;
-
-//   // Validate inputs
-//   if (!id || !type) {
-//     return res.status(400).json({ message: "Invalid fields!" });
-//   }
-
-//   const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
-
-//   try {
-//     const [deliveryData] = await Model.aggregate([
-//       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-//       {
-//         $lookup: {
-//           from: "orders",
-//           localField: "orderId",
-//           foreignField: "_id",
-//           as: "orderDetails",
-//         },
-//       },
-//       { $unwind: "$orderDetails" },
-//       {
-//         $lookup: {
-//           from: "customers",
-//           localField: "orderDetails.customerId",
-//           foreignField: "_id",
-//           as: "customerDetails",
-//         },
-//       },
-//       { $unwind: "$customerDetails" },
-//     ]);
-
-//     if (!deliveryData) {
-//       return res.status(404).json({ message: "No data found" });
-//     }
-
-//     const populatedData = await Model.findById(id).populate({
-//       path: "products.product",
-//       select: "productName status",
-//     });
-
-//     const mergedProducts = deliveryData.products.map((product) => {
-//       const populatedProduct = populatedData.products.find(
-//         (p) => p.product._id.toString() === product.product.toString()
-//       );
-
-//       if (populatedProduct) {
-//         return {
-//           ...product,
-//           productName: populatedProduct.product.productName,
-//           type: populatedProduct.product.status,
-//         };
-//       }
-
-//       return product;
-//     });
-
-//     deliveryData.products = mergedProducts;
-//     const vender = await venderModel.findById(vendorId);
-
-//     const brandLogo = vender.brandLogo;
-//     const invoiceData = {
-//       brandLogo: brandLogo, // Replace with actual logo path
-//       invoiceDate: "2024-09-02",
-//       invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
-//       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
-//       customerName: deliveryData.customerDetails.name,
-//       customerAddress: deliveryData.customerDetails.addressLine1,
-//       customerCity: deliveryData.customerDetails.city,
-//       customerCountry: deliveryData.customerDetails.country,
-//       customerPostCode: deliveryData.customerDetails.postCode,
-//       customerEmail: deliveryData.customerDetails.email,
-//       orderId: deliveryData.orderDetails.orderId,
-//       orderType: deliveryData.deliveryNote,
-//       orderNumber: deliveryData.orderDetails.orderId,
-//       deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
-//         "lll"
-//       ),
-//       orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
-//       deliveryPlaceName: deliveryData.orderDetails.city,
-//       products: deliveryData.products.map((item) => {
-//         return {
-//           productName: item.productName,
-//           quantity: item.quantity,
-//           type: item.type,
-//           price: item.price,
-//           total: item.quantity * item.price,
-//         };
-//       }),
-//       totalPrice: deliveryData.products?.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
-//         0
-//       ),
-//     };
-
-//     const templatePath = path.join(__dirname, "invoice.html");
-//     const templateHtml = fs.readFileSync(templatePath, "utf8");
-//     const template = Handlebars.compile(templateHtml);
-//     const html = template(invoiceData);
-
-//     htmlPdf.create(html).toBuffer((err, pdfBuffer) => {
-//       if (err) {
-//         console.error(err);
-//         return res.status(500).json({ message: "Server Error!" });
-//       }
-
-//       res.setHeader("Content-Type", "application/pdf");
-//       res.setHeader(
-//         "Content-Disposition",
-//         'attachment; filename="invoice.pdf"'
-//       );
-//       res.send(pdfBuffer);
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: "Server Error!" });
-//   }
-// };
-// const invoicePDF = async (req, res) => {
-//   const { id, type } = req.body;
-//   const vendorId = req.user._id;
-
-//   // Validate inputs
-//   if (!id || !type) {
-//     return res.status(400).json({ message: "Invalid fields!" });
-//   }
-
-//   const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
-
-//   try {
-//     const [deliveryData] = await Model.aggregate([
-//       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-//       {
-//         $lookup: {
-//           from: "orders",
-//           localField: "orderId",
-//           foreignField: "_id",
-//           as: "orderDetails",
-//         },
-//       },
-//       { $unwind: "$orderDetails" },
-//       {
-//         $lookup: {
-//           from: "customers",
-//           localField: "orderDetails.customerId",
-//           foreignField: "_id",
-//           as: "customerDetails",
-//         },
-//       },
-//       { $unwind: "$customerDetails" },
-//     ]);
-
-//     if (!deliveryData) {
-//       return res.status(404).json({ message: "No data found" });
-//     }
-
-//     const populatedData = await Model.findById(id).populate({
-//       path: "products.product",
-//       select: "productName status",
-//     });
-
-//     const mergedProducts = deliveryData.products.map((product) => {
-//       const populatedProduct = populatedData.products.find(
-//         (p) => p.product._id.toString() === product.product.toString()
-//       );
-
-//       if (populatedProduct) {
-//         return {
-//           ...product,
-//           productName: populatedProduct.product.productName,
-//           type: populatedProduct.product.status,
-//         };
-//       }
-
-//       return product;
-//     });
-
-//     deliveryData.products = mergedProducts;
-//     const vender = await venderModel.findById(vendorId);
-
-//     const brandLogo = vender.brandLogo;
-//     const invoiceData = {
-//       brandLogo: brandLogo, // Replace with actual logo path
-//       invoiceDate: "2024-09-02",
-//       invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
-//       deliveryAddress: deliveryData.orderDetails.deliveryAddress1,
-//       customerName: deliveryData.customerDetails.name,
-//       customerAddress: deliveryData.customerDetails.addressLine1,
-//       customerCity: deliveryData.customerDetails.city,
-//       customerCountry: deliveryData.customerDetails.country,
-//       customerPostCode: deliveryData.customerDetails.postCode,
-//       customerEmail: deliveryData.customerDetails.email,
-//       orderId: deliveryData.orderDetails.orderId,
-//       orderType: deliveryData.deliveryNote,
-//       orderNumber: deliveryData.orderDetails.orderId,
-//       deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
-//         "lll"
-//       ),
-//       orderDate: moment(deliveryData.orderDetails.orderDate).format("lll"),
-//       deliveryPlaceName: deliveryData.orderDetails.city,
-//       products: deliveryData.products.map((item) => {
-//         return {
-//           productName: item.productName,
-//           quantity: item.quantity,
-//           type: item.type,
-//           price: item.price,
-//           total: item.quantity * item.price,
-//         };
-//       }),
-//       totalPrice: deliveryData.products?.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
-//         0
-//       ),
-//     };
-
-//     const templateHtml = fs.readFileSync("invoice.html", "utf8");
-//     const template = Handlebars.compile(templateHtml);
-//     const html = template(invoiceData);
-//     console.log(html);
-
-//     const browser = await puppeteer.launch({ headless: true });
-//     const page = await browser.newPage();
-//     await page.setContent(html);
-//     const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-//     await browser.close();
-
-//     // Set headers and send PDF as response
-//     res.setHeader("Content-Type", "application/pdf");
-//     res.setHeader("Content-Disposition", 'attachment; filename="invoice.pdf"');
-//     res.send(pdfBuffer);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: "Server Error!" });
-//   }
-// };
-
 const handleOrderBooking = async (req, res, type) => {
   const {
     orderId,
@@ -1630,257 +1373,6 @@ const handleOrderBooking = async (req, res, type) => {
 
 const orderBookIn = (req, res) => handleOrderBooking(req, res, "bookIn");
 const orderBookOut = (req, res) => handleOrderBooking(req, res, "bookOut");
-
-// const invoiceByVendorId = async (req, res) => {
-//   try {
-//     const vendorId = req.user._id;
-
-//     // Find all deliver notes for the given vendor ID
-//     const deliverNotes = await DeliverNote.find({ vendorId })
-//       .populate("customerId")
-//       .populate("orderId");
-
-//     if (!deliverNotes || deliverNotes.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: "No deliver notes found for this vendor" });
-//     }
-//     const vendor = await venderModel.findById(vendorId);
-//     // Construct the invoice object
-//     const invoiceData = deliverNotes.map((note) => ({
-//       id: note._id,
-//       brandLogo: vendor.brandLogo,
-//       orderId: note.orderId ? note.orderId.orderId : null,
-//       chargingStartDate: note.orderId ? note.orderId.chargingStartDate : null,
-//       orderDate: note.orderId ? note.orderId.orderDate : null,
-//       deliveryDate: note.orderId
-//         ? moment(note.orderId.deliveryDate).format("lll")
-//         : null,
-//       deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
-//       customerName: note.customerId ? note.customerId.name : null,
-//       customerAddress: note.customerId ? note.customerId.addressLine1 : null,
-//       customerCity: note.customerId ? note.customerId.city : null,
-//       customerCountry: note.customerId ? note.customerId.country : null,
-//       customerPostCode: note.customerId ? note.customerId.postCode : null,
-//       customerEmail: note.customerId ? note.customerId.email : null,
-//       products: note.products,
-//       totalPrice: note.products.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
-//         0
-//       ),
-//       reference: note.reference,
-//       bookDate: note.bookDate,
-//       createdAt: note.createdAt,
-//       updatedAt: note.updatedAt,
-//     }));
-
-//     // Send the response
-//     res.status(200).json(invoiceData);
-//   } catch (error) {
-//     console.error("Error fetching invoices by vendor ID:", error);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-// Function to send email
-
-// const invoiceByVendorId = async (req, res) => {
-//   try {
-//     const vendorId = req.user._id;
-//     console.log("start");
-
-//     const deliverNotes = await DeliverNote.find({ vendorId })
-//       .populate("customerId")
-//       .populate("orderId");
-
-//     if (!deliverNotes || deliverNotes.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: "No deliver notes found for this vendor" });
-//     }
-
-//     const vendor = await venderModel.findById(vendorId);
-
-//     const invoiceData = deliverNotes.map((note) => ({
-//       id: note._id,
-//       brandLogo: vendor.brandLogo,
-//       orderId: note.orderId ? note.orderId.orderId : null,
-//       chargingStartDate: note.orderId ? note.orderId.chargingStartDate : null,
-//       orderDate: note.orderId ? note.orderId.orderDate : null,
-//       deliveryDate: note.orderId
-//         ? moment(note.orderId.deliveryDate).format("lll")
-//         : null,
-//       deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
-//       customerName: note.customerId ? note.customerId.name : null,
-//       customerEmail: note.customerId ? note.customerId.email : null,
-//       products: note.products,
-//       totalPrice: note.products.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
-//         0
-//       ),
-//       reference: note.reference,
-//       bookDate: note.bookDate,
-//       createdAt: note.createdAt,
-//       updatedAt: note.updatedAt,
-//     }));
-
-//     // Create a transporter (this can be outside the loop if using a single SMTP connection)
-//     // Looking to send emails in production? Check out our Email API/SMTP product!
-//     var transporter = nodemailer.createTransport({
-//       service: "gmail",
-//       auth: {
-//         user: "parshotamrughanii@gmail.com", // your Gmail account
-//         pass: "walz hskf huzy yljv", // App Password from step 1
-//       },
-//     });
-
-//     // Send emails concurrently
-//     await Promise.all(
-//       invoiceData.map(async (invoice) => {
-//         const customerEmail = invoice.customerEmail;
-//         if (customerEmail) {
-//           const mailOptions = {
-//             from: "parshotamrughanii@gmail.com",
-//             to: customerEmail, // Send to the specific customer email
-//             subject: "Invoice Details",
-//             text: `Dear ${invoice.customerName}, please find the invoice details:\nOrder ID: ${invoice.orderId}\nTotal Price: ${invoice.totalPrice}\nDelivery Date: ${invoice.deliveryDate}`,
-//           };
-
-//           // Send the email
-//           try {
-//             await transporter.sendMail(mailOptions);
-//             console.log(`Email sent to ${customerEmail}`);
-//           } catch (error) {
-//             console.error(`Error sending email to ${customerEmail}:`, error);
-//           }
-//         }
-//       })
-//     );
-
-//     res.status(200).json({
-//       message: "Invoices sent to all customers with valid email addresses",
-//       invoiceData,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching invoices by vendor ID:", error);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-// const invoiceByVendorId = async (req, res) => {
-//   try {
-//     const vendorId = req.user._id;
-//     const deliverNotes = await DeliverNote.find({ vendorId })
-//       .populate("customerId")
-//       .populate("orderId");
-
-//     if (!deliverNotes || deliverNotes.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: "No deliver notes found for this vendor" });
-//     }
-
-//     const vendor = await venderModel.findById(vendorId);
-
-//     const invoiceData = deliverNotes.map((note) => ({
-//       id: note._id,
-//       brandLogo: vendor.brandLogo,
-//       orderId: note.orderId ? note.orderId.orderId : null,
-//       deliveryDate: note.orderId
-//         ? moment(note.orderId.deliveryDate).format("lll")
-//         : null,
-//       deliveryAddress: note.orderId ? note.orderId.deliveryAddress1 : null,
-//       customerName: note.customerId ? note.customerId.name : null,
-//       customerEmail: note.customerId ? note.customerId.email : null,
-//       products: note.products,
-//       totalPrice: note.products.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
-//         0
-//       ),
-//     }));
-
-//     const transporter = nodemailer.createTransport({
-//       service: "gmail",
-//       auth: {
-//         user: "parshotamrughanii@gmail.com",
-//         pass: "walz hskf huzy yljv", // Use App Password for better security
-//       },
-//     });
-
-//     await Promise.all(
-//       invoiceData.map(async (invoice) => {
-//         const customerEmail = invoice.customerEmail;
-//         if (customerEmail) {
-//           // Read and compile the Handlebars template
-
-//           const templatePath = path.join(__dirname, "invoice.html");
-//           const templateHtml = fs.readFileSync(templatePath, "utf8");
-//           const template = Handlebars.compile(templateHtml);
-
-//           // Create HTML content by passing data to the template
-//           const htmlContent = template({
-//             brandLogo: invoice.brandLogo,
-//             invoiceDate: new Date().toLocaleDateString(),
-//             invoiceNumber: invoice.id,
-//             deliveryAddress: invoice.deliveryAddress,
-//             customerName: invoice.customerName,
-//             customerEmail: invoice.customerEmail,
-//             orderId: invoice.orderId,
-//             deliveryDate: invoice.deliveryDate,
-//             products: invoice.products.map((product) => ({
-//               productName: product.productName,
-//               quantity: product.quantity,
-//               type: product.type,
-//               price: product.price,
-//               total: (product.price * product.quantity).toFixed(2),
-//             })),
-//             totalPrice: invoice.totalPrice.toFixed(2),
-//           });
-
-//           const pdfBuffer = await createPdf(htmlContent);
-
-//           const mailOptions = {
-//             from: "parshotamrughanii@gmail.com",
-//             to: customerEmail,
-//             subject: "Invoice Details",
-//             text: `Dear ${invoice.customerName}, please find the invoice details attached.`,
-//             attachments: [
-//               {
-//                 filename: `invoice_${invoice.id}.pdf`,
-//                 content: pdfBuffer,
-//                 contentType: "application/pdf",
-//               },
-//             ],
-//           };
-
-//           try {
-//             await transporter.sendMail(mailOptions);
-//             console.log(`Email sent to ${customerEmail}`);
-//           } catch (error) {
-//             console.error(`Error sending email to ${customerEmail}:`, error);
-//           }
-//         }
-//       })
-//     );
-
-//     res.status(200).json({
-//       message: "Invoices sent to all customers with valid email addresses",
-//       invoiceData,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching invoices by vendor ID:", error);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-// const createPdf = async (html) => {
-//   const browser = await puppeteer.launch();
-//   const page = await browser.newPage();
-//   await page.setContent(html, { waitUntil: "networkidle0" });
-//   const pdfBuffer = await page.pdf({ format: "A4" });
-//   await browser.close();
-//   return pdfBuffer;
-// };
 
 const invoiceByVendorId = async (req, res) => {
   try {

@@ -1,4 +1,7 @@
+const Order = require("../models/orderModel");
 const PaymentTerm = require("../models/paymentTerm");
+const Customer = require("../models/customers");
+
 exports.createPaymentTerm = async (req, res) => {
   try {
     const { _id: vendorId } = req.user;
@@ -146,6 +149,28 @@ exports.updatePaymentTermById = async (req, res) => {
 exports.deletePaymentTermById = async (req, res) => {
   try {
     const paymentTerm = await PaymentTerm.findByIdAndDelete(req.params.id);
+
+    const paymentTermsExistInOrders = await Order.findOne({
+      paymentTerm: req.params.id,
+    });
+
+    if (paymentTermsExistInOrders) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment term in use, cannot delete.",
+      });
+    }
+    const paymentTermsExistInCustomer = await Customer.findOne({
+      paymentTerm: req.params.id,
+    });
+
+    if (paymentTermsExistInCustomer) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment term in use, cannot delete.",
+      });
+    }
+
     if (!paymentTerm) {
       return res
         .status(404)

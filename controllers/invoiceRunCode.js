@@ -1,4 +1,6 @@
 const InvoiceRunCode = require("../models/invoiceRunCode");
+const Order = require("../models/orderModel");
+const Customer = require("../models/customers");
 
 exports.createInvoiceRunCode = async (req, res) => {
   try {
@@ -141,6 +143,28 @@ exports.updateInvoiceRunCodeById = async (req, res) => {
 exports.deleteInvoiceRunCodeById = async (req, res) => {
   try {
     const invoice = await InvoiceRunCode.findByIdAndDelete(req.params.id);
+
+    const runCodeExistInOrders = await Order.findOne({
+      invoiceRunCode: req.params.id,
+    });
+
+    if (runCodeExistInOrders) {
+      return res.status(400).json({
+        success: false,
+        message: "Invoice Run Code in use, cannot delete.",
+      });
+    }
+    const runCodeExistInCustomer = await Customer.findOne({
+      invoiceRunCode: req.params.id,
+    });
+
+    if (runCodeExistInCustomer) {
+      return res.status(400).json({
+        success: false,
+        message: "Invoice Run Code in use, cannot delete.",
+      });
+    }
+
     if (!invoice) {
       return res
         .status(404)

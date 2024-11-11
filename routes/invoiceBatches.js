@@ -12,6 +12,7 @@ const {
   postSingleInvoice,
   postMulipleInvoice,
   confrimInvoice,
+  multipleInvoicePrint,
 } = require("../controllers/invoiceBatches");
 
 router.post("/invoice-run", generateInvoiceBatchNumber);
@@ -25,6 +26,7 @@ router.delete(
 router.get("/invoice-batches/:id", getInvocieBatchById);
 router.post("/invoice-view", getInvoiceById);
 router.post("/invoice-print", invoicePrint);
+router.post("/multiple-invoice-print", multipleInvoicePrint);
 router.post("/invoice-post", postSingleInvoice);
 router.post("/invoice-post-all", postMulipleInvoice);
 router.put("/invoice-status", confrimInvoiceBatchStatus);

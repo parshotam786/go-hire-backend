@@ -3,11 +3,13 @@ const path = require("path");
 const Customer = require("../models/customers");
 const Order = require("../models/orderModel");
 const { errorResponse, successResponse } = require("../utiles/responses");
+const invoiceBatches = require("../models/invoiceBatches");
 const { default: mongoose } = require("mongoose");
 const QuickBooks = require("node-quickbooks");
 const { getNextSequence } = require("../services/counterService");
 const Quickbook = require("../models/quickbookAuth");
 const venderModel = require("../models/venderModel");
+require("colors");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -58,11 +60,21 @@ const addCustomer = async (req, res) => {
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
+    if (!invoiceRunCode) {
+      return res
+        .status(404)
+        .json({ message: "Invoice run code field is empty!" });
+    }
+    if (!paymentTerm) {
+      return res
+        .status(404)
+        .json({ message: "Payment Terms code field is empty!" });
+    }
 
     const isQuickBookAccountExist = vendor.isQuickBook;
 
     const customer = new Customer({
-      customerID: "",
+      customerID: 0,
       name,
       number,
       owner,
@@ -141,9 +153,8 @@ const addCustomer = async (req, res) => {
       // Create customer in QuickBooks
       qbo.createCustomer(customerData, async (err, qbCustomer) => {
         if (err) {
-          console.error("Error creating customer in QuickBooks:", err);
           return res.status(500).json({
-            message: "Error creating customer in QuickBooks",
+            message: err.Fault.Error[0].Message,
             error: err,
           });
         } else {
@@ -157,7 +168,7 @@ const addCustomer = async (req, res) => {
               customer,
             });
           } catch (saveError) {
-            console.error("Error saving customer data:", saveError);
+            // console.error("Error saving customer data:", saveError);
             return res.status(500).json({
               message: "Error saving customer data",
               error: saveError,
@@ -166,11 +177,9 @@ const addCustomer = async (req, res) => {
         }
       });
 
-      // Stop further processing if QuickBooks error occurs
-      return; // Ensure this prevents further execution
+      return;
     }
 
-    // Save customer to local database without QuickBooks integration
     await customer.save();
     res.status(201).json({
       message: "Customer created successfully",
@@ -178,7 +187,7 @@ const addCustomer = async (req, res) => {
       customer,
     });
   } catch (error) {
-    console.error(error);
+    // console.error(error.Fault.Error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -266,6 +275,7 @@ const updateCustomer = async (req, res) => {
       taxClass: req.body.taxClass,
       parentAccount: req.body.parentAccount,
       invoiceRunCode: req.body.invoiceRunCode,
+
       paymentTerm: req.body.paymentTerm,
     };
 
@@ -315,30 +325,88 @@ const deleteCustomer = async (req, res) => {
 
 const getCustomerById = async (req, res) => {
   try {
+    const { _id: vendorId } = req.user;
     const { id } = req.params;
+    const vendor = await venderModel.findById(vendorId);
 
+    const batches = await invoiceBatches.find({ vendorId }).lean();
+
+    if (!batches || batches.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No batches found for the given vendorId." });
+    }
+
+    const filteredInvoices = batches.filter(Boolean).flatMap((batch) =>
+      batch.invoices.map((invoice) => ({
+        ...invoice,
+        batchId: batch._id,
+      }))
+    );
+    const customerInvoices = filteredInvoices.filter(
+      (invoice) => invoice.customer_id == id
+    );
+    console.log({ customerInvoices });
+
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         message: "Invalid customer ID",
         success: false,
       });
     }
+    const isQuickBookAccountExist = vendor.isQuickBook;
 
-    // const customer = await Customer.findById(id);
+    if (isQuickBookAccountExist) {
+      const existingRecord = await Quickbook.findOne({ vendorId });
+      if (!existingRecord) {
+        return res
+          .status(404)
+          .json({ message: "QuickBooks account not found" });
+      }
 
-    // if (!customer) {
-    //   return res.status(404).json({
-    //     message: "Customer not found",
-    //     success: false,
-    //   });
-    // }
+      const customers = await Customer.findById(id);
+
+      const qbo = new QuickBooks(
+        process.env.CLIENT_ID,
+        process.env.CLIENT_SECRET,
+        existingRecord.accessToken,
+        false,
+        existingRecord.realmId,
+        true,
+        true,
+        existingRecord.refreshToken,
+        "2.0"
+      );
+      const nameId = customers.customerID;
+
+      qbo.getCustomer(nameId, async (error, customerDetail) => {
+        if (error) {
+          // return res
+          //   .status(500)
+          //   .json({ success: false, error: error, message: error.fault.type });
+        } else {
+          const balance = customerDetail.Balance;
+
+          // Update the customer document with the balance in the Payment field
+          await Customer.findByIdAndUpdate(
+            id,
+            { totalPrice: balance },
+            { new: true }
+          );
+          // return res.json({ customerDetail });
+        }
+      });
+
+      // return; // Add this to prevent further code execution
+    }
 
     const objectId = mongoose.mongo.ObjectId.createFromHexString(id);
 
     const customerWithOrders = await Customer.aggregate([
-      {
-        $match: { _id: objectId },
-      },
+      { $match: { _id: objectId } },
       {
         $lookup: {
           from: "orders",
@@ -366,16 +434,36 @@ const getCustomerById = async (req, res) => {
       {
         $addFields: {
           numOfOrders: { $size: "$orders" },
-        },
-      },
-      {
-        $addFields: {
           numOfRN: { $size: "$returnnotes" },
+          numOfDN: { $size: "$delivernotes" },
         },
       },
       {
-        $addFields: {
-          numOfDN: { $size: "$delivernotes" },
+        $lookup: {
+          from: "paymentterms",
+          localField: "paymentTerm",
+          foreignField: "_id",
+          as: "paymentTerm",
+        },
+      },
+      {
+        $lookup: {
+          from: "invoiceruncodes",
+          localField: "invoiceRunCode",
+          foreignField: "_id",
+          as: "invoiceRunCode",
+        },
+      },
+      {
+        $unwind: {
+          path: "$paymentTerm",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: "$invoiceRunCode",
+          preserveNullAndEmptyArrays: true,
         },
       },
     ]);
@@ -390,10 +478,12 @@ const getCustomerById = async (req, res) => {
     res.status(200).json({
       message: "Customer retrieved successfully",
       success: true,
-      customer: customerWithOrders[0],
+      data: {
+        customer: customerWithOrders[0],
+        invoice: customerInvoices,
+      },
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };

@@ -589,8 +589,6 @@ const removeVenderAccount = async (req, res) => {
         message: "Vendor Account Deleted successfully",
       });
     } catch (error) {
-      // await session.abortTransaction();
-      console.error("Error removing Vendor:", error);
       return res
         .status(500)
         .json({ error: "Error removing Vendor", details: error.message });

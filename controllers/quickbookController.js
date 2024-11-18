@@ -83,7 +83,7 @@ const quickBookPayments = async (req, res) => {
     });
     res.json(JSON.parse(response.body));
   } catch (error) {
-    console.log(error);
+    return error;
   }
 };
 

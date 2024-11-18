@@ -71,6 +71,9 @@
         vertical-align: top;
         padding-top: 30px;
       }
+      .footer .note div {
+        margin-bottom: 6px;
+      }
       .footer .totals {
         display: table-cell;
         text-align: right;
@@ -194,7 +197,15 @@
       </div>
       <div class="footer">
         <div class="note">
-          <div><strong>Note: ___________</strong></div>
+          <div>
+            <strong>Payment Terms and Methods</strong>
+          </div>
+
+          <div>
+            <p>
+              The payment is due {{paymentTerms}} days from the Invoice Date.
+            </p>
+          </div>
         </div>
         <div class="totals">
           <div><strong>Sub Total: {{totalPrice}}$</strong></div>

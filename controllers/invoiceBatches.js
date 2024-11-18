@@ -4,6 +4,8 @@ const Order = require("../models/orderModel");
 const Document = require("../models/documentNumber");
 const nodemailer = require("nodemailer"); // Require nodemailer
 const { chromium } = require("playwright");
+const QuickBooks = require("node-quickbooks");
+const Quickbook = require("../models/quickbookAuth");
 
 const Customer = require("../models/customers");
 const htmlPdf = require("html-pdf");
@@ -11,7 +13,11 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const Handlebars = require("handlebars");
 const path = require("path");
-
+function getDueDate(daysToAdd) {
+  let dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + daysToAdd);
+  return dueDate.toISOString().split("T")[0];
+}
 const {
   countDaysBetween,
   countWeekdaysBetweenDates,
@@ -58,7 +64,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
               match: { code: invoiceRunCode },
             }
       )
-      .populate(["customerId", "products.product"]);
+      .populate(["customerId", "products.product", "paymentTerm"]);
 
     const filteredOrders = orders.filter((order) => order.invoiceRunCode);
 
@@ -146,7 +152,6 @@ const generateInvoiceBatchNumber = async (req, res) => {
         (acc, product) => acc + product.total,
         0
       );
-
       return {
         id: element._id,
         brandLogo: vender.brandLogo,
@@ -157,6 +162,9 @@ const generateInvoiceBatchNumber = async (req, res) => {
         customerName: element.billingPlaceName,
         customerAddress: element.address1,
         customerAddress2: element.address2,
+        customerId: element.customerId.customerID,
+        customer_id: element.customerId._id,
+        paymentTerms: element.paymentTerm.days,
         customerCity: element.city,
         customerCountry: element.country,
         // customerPostCode: element.postCode,
@@ -184,7 +192,6 @@ const generateInvoiceBatchNumber = async (req, res) => {
       const bookDateStart = new Date(invoiceUptoDate);
       const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
       const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
-      console.log({ daysCount, totalDaysCount });
 
       return {
         id: element._id,
@@ -486,7 +493,6 @@ const getInvocieBatchById = async (req, res) => {
       path: "orders",
       populate: [{ path: "products.product" }, { path: "customerId" }],
     });
-    console.log({ invoiceData });
     if (!invoiceData) {
       return res
         .status(404)
@@ -582,6 +588,9 @@ const getInvocieBatchById = async (req, res) => {
         customerAddress: element.address1,
         customerAddress2: element.address2,
         customerCity: element.city,
+        customerId: element.customerId,
+        customer_id: element.customer_id,
+        paymentTerms: element.paymentTerms,
         customerCountry: element.country,
         // customerPostCode: element.postCode,
         customerEmail: element.customerId.email,
@@ -662,11 +671,7 @@ const removeOrderFromInvoiceBatch = async (req, res) => {
         .status(404)
         .json({ message: "Invoice batch not found or not authorized" });
     }
-    console.log(
-      invoiceBatch.totalPrice,
-      invoiceBatch.tax,
-      invoiceBatch.totalInvoice
-    );
+
     // Update by pulling the order from the orders array
     const updatedInvoiceBatch = await invoiceBatches
       .findByIdAndUpdate(
@@ -743,11 +748,7 @@ const removeOrderFromInvoiceBatch = async (req, res) => {
       };
     });
     const filterdataa = filterData;
-    console.log(
-      filterData,
 
-      "ddd"
-    );
     invoiceBatch.totalInvoice = updatedInvoiceBatch.orders.length;
     invoiceBatch.totalPrice = filterdataa.total;
     invoiceBatch.tax = filterdataa.tax;
@@ -876,8 +877,49 @@ const postSingleInvoice = async (req, res) => {
         .json({ success: false, message: "Invoice not found in this batch" });
     }
     const vender = await venderModel.findById(vendorId);
-
     const invoiceDetail = filterInvoice[0];
+
+    const invoice = {
+      Line: invoiceDetail.product.map((item) => ({
+        Description: item.productName,
+        Amount: item.total,
+        DetailType: "SalesItemLineDetail",
+        SalesItemLineDetail: {
+          UnitPrice: item.vattotalPrice,
+          Qty: item.quantity,
+        },
+      })),
+      CustomerRef: {
+        value: `${invoiceDetail.customerId}`,
+        name: invoiceDetail.customerName,
+      },
+      BillEmail: {
+        Address: invoiceDetail.customerEmail, // Customer's email
+      },
+      BillAddr: {
+        Line1: invoiceDetail.customerAddress,
+        City: invoiceDetail.customerCity,
+        PostalCode: invoiceDetail.customerCountry,
+      },
+      SalesTermRef: {
+        value: "1",
+      },
+      DueDate: getDueDate(Number(invoiceDetail.paymentTerms)),
+      TotalAmt: invoiceDetail.vattotalPrice,
+    };
+    const existingRecord = await Quickbook.findOne({ vendorId });
+    const qbo = new QuickBooks(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      existingRecord.accessToken,
+      false,
+      existingRecord.realmId,
+      true,
+      true,
+      existingRecord.refreshToken,
+      "2.0"
+    );
+
     const invoiceData = {
       brandLogo: vender.brandLogo,
       invoiceDate: invoiceDetail.invoiceDate,
@@ -953,10 +995,34 @@ const postSingleInvoice = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({
-      message: "Invoice Posted successfully!",
-      success: true,
-    });
+    // res.status(200).json({
+    //   message: "Invoice Posted successfully!",
+    //   success: true,
+    // });
+
+    if (invoiceDetail.customerId != 0) {
+      qbo.createInvoice(invoice, async function (err, invoice) {
+        if (err) {
+          return res.send({
+            message: "AUTHENTICATION",
+          });
+        } else {
+          await invoiceBatches.updateOne(
+            { _id: id, "invoices.id": invoiceId },
+            { $set: { "invoices.$.DocNumber": invoice.DocNumber } }
+          );
+          return res.status(200).json({
+            message: "Invoice Posted successfully!",
+            success: true,
+          });
+        }
+      });
+    } else {
+      return res.status(200).json({
+        message: "Invoice Posted successfully!",
+        success: true,
+      });
+    }
   } catch (error) {
     console.error("Error fetching invoices by vendor ID:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -1018,9 +1084,48 @@ const postMulipleInvoice = async (req, res) => {
         pass: "walz hskf huzy yljv",
       },
     });
-
+    const existingRecord = await Quickbook.findOne({ vendorId });
+    const qbo = new QuickBooks(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      existingRecord.accessToken,
+      false,
+      existingRecord.realmId,
+      true,
+      true,
+      existingRecord.refreshToken,
+      "2.0"
+    );
     await Promise.all(
       invoiceBatch.invoices.map(async (invoice) => {
+        const invoicePost = {
+          Line: invoice.product.map((item) => ({
+            Description: item.productName,
+            Amount: item.total,
+            DetailType: "SalesItemLineDetail",
+            SalesItemLineDetail: {
+              UnitPrice: item.vattotalPrice,
+              Qty: item.quantity,
+            },
+          })),
+          CustomerRef: {
+            value: `${invoice.customerId}`,
+            name: invoice.customerName,
+          },
+          BillEmail: {
+            Address: invoice.customerEmail, // Customer's email
+          },
+          BillAddr: {
+            Line1: invoice.customerAddress,
+            City: invoice.customerCity,
+            PostalCode: invoice.customerCountry,
+          },
+          SalesTermRef: {
+            value: "1",
+          },
+          DueDate: getDueDate(Number(invoice.paymentTerms)),
+          TotalAmt: invoice.vattotalPrice,
+        };
         const customerEmail = invoice.customerEmail;
         if (customerEmail) {
           const templatePath = path.join(__dirname, "invoicePrint.html");
@@ -1086,6 +1191,29 @@ const postMulipleInvoice = async (req, res) => {
               },
             ],
           };
+          if (invoice.customerId != 0) {
+            qbo.createInvoice(invoicePost, async function (err, invoices) {
+              if (err) {
+                return res.send({
+                  message: err,
+                });
+              } else {
+                await invoiceBatches.updateOne(
+                  { _id: id, "invoices.id": invoice.id },
+                  { $set: { "invoices.$.DocNumber": invoices.DocNumber } }
+                );
+                // return res.status(200).json({
+                //   message: "Invoice Posted and Save successfully!",
+                //   success: true,
+                // });
+              }
+            });
+          } else {
+            return res.status(200).json({
+              message: "Invoice Posted successfully!",
+              success: true,
+            });
+          }
 
           try {
             await transporter.sendMail(mailOptions);
@@ -1096,10 +1224,10 @@ const postMulipleInvoice = async (req, res) => {
       })
     );
 
-    res.status(200).json({
-      message: "Invoice Posted successfully!",
-      success: true,
-    });
+    // res.status(200).json({
+    //   message: "Invoice Posted successfully!",
+    //   success: true,
+    // });
   } catch (error) {
     console.error("Error fetching invoices by vendor ID:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -1160,8 +1288,8 @@ const confrimInvoiceBatchStatus = async (req, res) => {
 };
 
 const confrimInvoice = async (req, res) => {
-  const { _id: vendorId } = req.user;
   try {
+    const { _id: vendorId } = req.user;
     const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
 
     const { id, invoiceId } = req.body;

@@ -20,6 +20,10 @@ const ReturnNoteSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    DocNumber: {
+      type: String,
+      default: 0,
+    },
     paymentTerms: {
       type: Number,
     },

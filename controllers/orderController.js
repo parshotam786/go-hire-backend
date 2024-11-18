@@ -98,6 +98,11 @@ const percetageCalculate = (taxRate, price) => {
   return percentage + price;
 };
 
+function getDueDate(daysToAdd) {
+  let dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + daysToAdd);
+  return dueDate.toISOString().split("T")[0];
+}
 async function removeOrderFromAllBatches(orderId) {
   try {
     const orderObjectId = orderId;
@@ -107,10 +112,9 @@ async function removeOrderFromAllBatches(orderId) {
       { $pull: { orders: orderObjectId } }
     );
 
-    console.log("Orders removed:", result.modifiedCount);
     return result;
   } catch (error) {
-    console.error("Error removing order from batches:", error);
+    console.log("");
   }
 }
 
@@ -173,7 +177,7 @@ const getAllOrders = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.error("Error fetching orders:", error);
+    console.error("");
     return res
       .status(500)
       .json({ error: "Internal server error", success: false });
@@ -231,7 +235,6 @@ const updateOrder = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.error("Error updating order:", error);
     return res.status(500).json({
       message: "Error updating order",
       success: false,
@@ -747,7 +750,7 @@ const generateOrderInvoice = async (req, res) => {
 };
 
 const generateOrderNote = async (req, res) => {
-  const { id, type } = req.body;
+  const { id, type, DocNumber } = req.body;
   const vendorId = req.user._id;
 
   if (!id || !type) {
@@ -755,6 +758,7 @@ const generateOrderNote = async (req, res) => {
   }
 
   const Model = type?.toUpperCase() === "DN" ? DeliverNote : ReturnNote;
+  const isDocNumber = await Model.findById(id);
 
   try {
     const [deliveryData] = await Model.aggregate([
@@ -851,6 +855,8 @@ const generateOrderNote = async (req, res) => {
       collectionChargeAmount: collectionChargeAmount,
       orderType: deliveryData.deliveryNote,
       orderNumber: deliveryData.orderDetails.orderId,
+      DocNumber: deliveryData.DocNumber,
+      paymentTerms: deliveryData.paymentTerms,
       deliveryDate: moment(deliveryData.orderDetails.deliveryDate).format(
         "lll"
       ),
@@ -977,7 +983,7 @@ const generateOrderNote = async (req, res) => {
         SalesTermRef: {
           value: "1",
         },
-        DueDate: "2024-09-01",
+        DueDate: getDueDate(deliveryData.paymentTerms),
         TotalAmt: invoiceData.vatTotal,
       };
       const existingRecord = await Quickbook.findOne({ vendorId });
@@ -992,11 +998,27 @@ const generateOrderNote = async (req, res) => {
         existingRecord.refreshToken,
         "2.0"
       );
-
-      qbo.createInvoice(invoice, function (err, invoice) {
-        if (err) {
-          return res.send({
-            message: "AUTHENTICATION",
+      if (type == "RN") {
+        if (
+          isDocNumber.DocNumber == "0" ||
+          isDocNumber.DocNumber == undefined
+        ) {
+          qbo.createInvoice(invoice, async function (err, invoice) {
+            if (err) {
+              return res.send({
+                message: "AUTHENTICATION",
+              });
+            } else {
+              await ReturnNote.findByIdAndUpdate(
+                id,
+                { DocNumber: invoice.DocNumber },
+                { new: true }
+              );
+              return successResponse(res, {
+                data: invoiceData,
+                message: "Invoice fetched successfully",
+              });
+            }
           });
         } else {
           return successResponse(res, {
@@ -1004,7 +1026,7 @@ const generateOrderNote = async (req, res) => {
             message: "Invoice fetched successfully",
           });
         }
-      });
+      }
     } else {
       return successResponse(res, {
         data: invoiceData,
@@ -1096,6 +1118,7 @@ const invoicePDF = async (req, res) => {
       customerCity: deliveryData.customerDetails.city,
       customerCountry: deliveryData.customerDetails.country,
       customerPostCode: deliveryData.customerDetails.postCode,
+      paymentTerms: deliveryData.paymentTerms,
       collectionChargeAmount:
         collectionChargeAmount != 0
           ? `A delivery fee of $${collectionChargeAmount} may apply, based on your location and order details.`
@@ -1254,7 +1277,6 @@ const invoicePDF = async (req, res) => {
     const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
     res.json({ url: pdfUrl });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server Error!" });
   }
 };
@@ -1530,7 +1552,6 @@ const getOrdersOnRent = async (req, res) => {
       const bookDateStart = new Date(invoiceUptoDate);
       const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
       const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
-      console.log({ daysCount, totalDaysCount });
 
       return {
         id: element._id,

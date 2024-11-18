@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const CustomersSchema = new mongoose.Schema({
-  customerID: { type: Number, unique: true },
+  customerID: { type: Number, default: 0 },
   name: {
     type: String,
   },
@@ -74,6 +74,9 @@ const CustomersSchema = new mongoose.Schema({
   },
   parentAccount: {
     type: String,
+  },
+  totalPrice: {
+    type: Number,
   },
   invoiceRunCode: {
     type: mongoose.Schema.Types.ObjectId,

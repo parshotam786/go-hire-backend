@@ -66,126 +66,158 @@ const generateInvoiceBatchNumber = async (req, res) => {
       )
       .populate(["customerId", "products.product", "paymentTerm"]);
 
-    const filteredOrders = orders.filter((order) => order.invoiceRunCode);
+    const vender = await venderModel.findById(vendorId);
+    const batches = await invoiceBatches.find({ vendorId }).lean();
+
+    const filteredInvoices = batches.filter(Boolean).flatMap((batch) =>
+      batch.invoices.map((invoice) => ({
+        ...invoice,
+        batchId: batch._id,
+      }))
+    );
+    const customerInvoices = filteredInvoices.filter(
+      (invoice) => invoice.orderId
+    );
+
+    const isInvoiceExist = customerInvoices.map((item) => item.orderId);
+    console.log(isInvoiceExist);
+    const sortedData = orders.filter((item) => item.invoiceInBatch === 0);
+
+    for (const orderItem of sortedData) {
+      try {
+        console.log("Processing order:", orderItem);
+        const result = await Order.updateOne(
+          { _id: orderItem._id, vendorId: orderItem.vendorId },
+          { $set: { invoiceInBatch: 1 } }
+        );
+        console.log("Update Result:", result);
+      } catch (err) {
+        console.error("Error updating order:", orderItem._id, err);
+      }
+    }
+
+    const filteredOrders = sortedData.filter((order) => order.invoiceRunCode);
 
     if (!filteredOrders.length) {
       return res.status(404).json({ message: "No matching invocies found" });
     }
+    const allInvoice = orders
+      .filter((item) => item.invoiceInBatch == 0)
+      .map((element) => {
+        const chargingStart = element.chargingStartDate;
+        const bookDateStart = new Date(invoiceUptoDate);
+        const daysCount = countWeekdaysBetweenDates(
+          chargingStart,
+          bookDateStart
+        );
+        const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
+        const productData = element.products
+          .filter((item) => item.status === "onrent")
+          .map((item) => {
+            const days = [
+              Number(item.Day1),
+              Number(item.Day2),
+              Number(item.Day3),
+              Number(item.Day4),
+              Number(item.Day5),
+              Number(item.Day6),
+            ];
 
-    const vender = await venderModel.findById(vendorId);
+            const daysInWeek = Number(item?.rentalDaysPerWeek);
+            const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+            const productTotalPrice = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).totalPrice;
+            const fullWeeks = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).fullWeeks;
+            const remainingDays = calculateProductPrice(
+              item?.price,
+              daysCount,
+              totalDaysCount,
+              days,
+              daysInWeek,
+              minimumRentailPeriod
+            ).remainingDays;
+            return {
+              productName: item.product.productName,
+              quantity: item.quantity,
+              type: item.status,
+              weeks: fullWeeks,
+              days: remainingDays,
+              vat: item.taxRate,
+              price: item.price,
+              minimumRentalPeriod: minimumRentailPeriod,
+              vatTotal:
+                item.type === "Sale"
+                  ? Number(item.quantity * item.price)
+                  : Number((item.quantity * productTotalPrice).toFixed(2)),
+              total:
+                item.type === "Sale"
+                  ? percetageCalculate(
+                      item.taxRate,
+                      Number(item.quantity * item.price)
+                    )
+                  : percetageCalculate(
+                      item.taxRate,
+                      Number((item.quantity * productTotalPrice).toFixed(2))
+                    ),
+            };
+          });
 
-    const allInvoice = orders.map((element) => {
-      const chargingStart = element.chargingStartDate;
-      const bookDateStart = new Date(invoiceUptoDate);
-      const daysCount = countWeekdaysBetweenDates(chargingStart, bookDateStart);
-      const totalDaysCount = countDaysBetween(chargingStart, bookDateStart);
-
-      const productData = element.products
-        .filter((item) => item.status === "onrent")
-        .map((item) => {
-          const days = [
-            Number(item.Day1),
-            Number(item.Day2),
-            Number(item.Day3),
-            Number(item.Day4),
-            Number(item.Day5),
-            Number(item.Day6),
-          ];
-
-          const daysInWeek = Number(item?.rentalDaysPerWeek);
-          const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
-          const productTotalPrice = calculateProductPrice(
-            item?.price,
-            daysCount,
-            totalDaysCount,
-            days,
-            daysInWeek,
-            minimumRentailPeriod
-          ).totalPrice;
-          const fullWeeks = calculateProductPrice(
-            item?.price,
-            daysCount,
-            totalDaysCount,
-            days,
-            daysInWeek,
-            minimumRentailPeriod
-          ).fullWeeks;
-          const remainingDays = calculateProductPrice(
-            item?.price,
-            daysCount,
-            totalDaysCount,
-            days,
-            daysInWeek,
-            minimumRentailPeriod
-          ).remainingDays;
-          return {
-            productName: item.product.productName,
-            quantity: item.quantity,
-            type: item.status,
-            weeks: fullWeeks,
-            days: remainingDays,
-            vat: item.taxRate,
-            price: item.price,
-            minimumRentalPeriod: minimumRentailPeriod,
-            vatTotal:
-              item.type === "Sale"
-                ? Number(item.quantity * item.price)
-                : Number((item.quantity * productTotalPrice).toFixed(2)),
-            total:
-              item.type === "Sale"
-                ? percetageCalculate(
-                    item.taxRate,
-                    Number(item.quantity * item.price)
-                  )
-                : percetageCalculate(
-                    item.taxRate,
-                    Number((item.quantity * productTotalPrice).toFixed(2))
-                  ),
-          };
-        });
-
-      // Calculate the sum of vatTotal for each product in the current order
-      const goods = productData
-        .reduce((acc, product) => acc + product.vatTotal, 0)
-        .toFixed(2);
-      const total = productData.reduce(
-        (acc, product) => acc + product.total,
-        0
-      );
-      return {
-        id: element._id,
-        brandLogo: vender.brandLogo,
-        invoiceDate: moment(element.bookDate).format("l"),
-        invoiceUptoDate: moment(invoiceUptoDate).format("l"),
-        // invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
-        deliveryAddress: element.deliveryAddress1,
-        customerName: element.billingPlaceName,
-        customerAddress: element.address1,
-        customerAddress2: element.address2,
-        customerId: element.customerId.customerID,
-        customer_id: element.customerId._id,
-        paymentTerms: element.paymentTerm.days,
-        customerCity: element.city,
-        customerCountry: element.country,
-        // customerPostCode: element.postCode,
-        customerEmail: element.customerId.email,
-        orderId: element.orderId,
-        // collectionChargeAmount: collectionChargeAmount,
-        // orderType: deliveryData.deliveryNote,
-        orderNumber: element.orderId,
-        deliveryDate: moment(element.deliveryDate).format("lll"),
-        orderDate: moment(element.orderDate).format("lll"),
-        deliveryPlaceName: element.city,
-        invoiceDate: moment().format("LLLL"),
-        product: productData,
-        goods,
-        total,
-        tax: Number(total - goods).toFixed(2),
-        invocie: "Draft",
-        billingPlaceName: element.billingPlaceName,
-        status: "Draft",
-      };
-    });
+        // Calculate the sum of vatTotal for each product in the current order
+        const goods = productData
+          .reduce((acc, product) => acc + product.vatTotal, 0)
+          .toFixed(2);
+        const total = productData.reduce(
+          (acc, product) => acc + product.total,
+          0
+        );
+        console.log(element);
+        return {
+          id: element._id,
+          brandLogo: vender.brandLogo,
+          invoiceDate: moment(element.bookDate).format("l"),
+          invoiceUptoDate: moment(invoiceUptoDate).format("l"),
+          // invoiceNumber: deliveryData.deliveryNote || deliveryData.returnNote,
+          deliveryAddress: element.deliveryAddress1,
+          customerName: element.billingPlaceName,
+          customerAddress: element.address1,
+          customerAddress2: element.address2,
+          customerId: element.customerId.customerID,
+          customer_id: element.customerId._id,
+          paymentTerms: element.paymentTerm.days,
+          customerCity: element.city,
+          customerCountry: element.country,
+          // customerPostCode: element.postCode,
+          customerEmail: element.customerId.email,
+          orderId: element.orderId,
+          // collectionChargeAmount: collectionChargeAmount,
+          // orderType: deliveryData.deliveryNote,
+          orderNumber: element.orderId,
+          deliveryDate: moment(element.deliveryDate).format("lll"),
+          orderDate: moment(element.orderDate).format("lll"),
+          deliveryPlaceName: element.city,
+          invoiceDate: moment().format("LLLL"),
+          product: productData,
+          goods,
+          total,
+          tax: Number(total - goods).toFixed(2),
+          invocie: "Draft",
+          billingPlaceName: element.billingPlaceName,
+          status: "Draft",
+        };
+      });
 
     const filterData = filteredOrders.map((element) => {
       const chargingStart = element.chargingStartDate;
@@ -825,6 +857,18 @@ const postSingleInvoice = async (req, res) => {
     const checkInvoiceStatus = invoiceBatch?.invoices?.filter(
       (item) => item.id == invoiceId
     );
+    for (const orderItem of checkInvoiceStatus) {
+      try {
+        console.log("Processing order:", orderItem);
+        const result = await Order.updateOne(
+          { _id: orderItem.id, vendorId: vendorId },
+          { $set: { invoiceInBatch: 0 } }
+        );
+        console.log("Update Result:", result);
+      } catch (err) {
+        console.error("Error updating order:", orderItem._id, err);
+      }
+    }
     const matchStatus = checkInvoiceStatus[0]?.status;
     if (matchStatus == "Draft") {
       const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
@@ -1052,6 +1096,18 @@ const postMulipleInvoice = async (req, res) => {
       (item) => item.status == "Draft" || item.status === "Confirmed"
     );
 
+    for (const orderItem of isDraftInvocie) {
+      try {
+        console.log("Processing order:", orderItem);
+        const result = await Order.updateOne(
+          { _id: orderItem.id, vendorId: vendorId },
+          { $set: { invoiceInBatch: 0 } }
+        );
+        console.log("Update Result:", result);
+      } catch (err) {
+        console.error("Error updating order:", orderItem._id, err);
+      }
+    }
     for await (let invoice of isDraftInvocie) {
       if (invoice.status == "Draft") {
         const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
@@ -1224,10 +1280,10 @@ const postMulipleInvoice = async (req, res) => {
       })
     );
 
-    // res.status(200).json({
-    //   message: "Invoice Posted successfully!",
-    //   success: true,
-    // });
+    res.status(200).json({
+      message: "Invoice Posted successfully!",
+      success: true,
+    });
   } catch (error) {
     console.error("Error fetching invoices by vendor ID:", error);
     res.status(500).json({ message: "Internal server error" });

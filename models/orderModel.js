@@ -34,6 +34,10 @@ const orderSchema = new mongoose.Schema(
     chargingStartDate: { type: Date, default: null },
     useExpectedReturnDate: { type: Boolean, default: false },
     customerReference: { type: String, default: "" },
+    invoiceInBatch: {
+      type: Number,
+      Default: 0,
+    },
     siteContact: { type: String, default: "" },
     depot: { type: String, default: "" },
     salesPerson: { type: String, default: "" },

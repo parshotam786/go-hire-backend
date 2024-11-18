@@ -331,12 +331,6 @@ const getCustomerById = async (req, res) => {
 
     const batches = await invoiceBatches.find({ vendorId }).lean();
 
-    if (!batches || batches.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No batches found for the given vendorId." });
-    }
-
     const filteredInvoices = batches.filter(Boolean).flatMap((batch) =>
       batch.invoices.map((invoice) => ({
         ...invoice,

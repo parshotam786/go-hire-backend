@@ -204,7 +204,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
           orderId: element.orderId,
           // collectionChargeAmount: collectionChargeAmount,
           // orderType: deliveryData.deliveryNote,
-          orderNumber: element.orderId,
+          orderNumber: element._id,
           deliveryDate: moment(element.deliveryDate).format("lll"),
           orderDate: moment(element.orderDate).format("lll"),
           deliveryPlaceName: element.city,
@@ -814,7 +814,7 @@ const getInvoiceById = async (req, res) => {
     }
 
     const filterInvoice = invoiceBatch.invoices.filter(
-      (item) => item.id == invoiceId
+      (item) => item._id == invoiceId
     );
     if (!filterInvoice[0]) {
       return res
@@ -855,7 +855,7 @@ const postSingleInvoice = async (req, res) => {
       return res.status(404).json({ message: "Invoice Batch not found" });
     }
     const checkInvoiceStatus = invoiceBatch?.invoices?.filter(
-      (item) => item.id == invoiceId
+      (item) => item._id == invoiceId
     );
     for (const orderItem of checkInvoiceStatus) {
       try {
@@ -881,7 +881,7 @@ const postSingleInvoice = async (req, res) => {
       const result = await invoiceBatches.findOneAndUpdate(
         {
           _id: id,
-          "invoices.id": invoiceId,
+          "invoices._id": invoiceId,
         },
         {
           $set: {
@@ -899,7 +899,7 @@ const postSingleInvoice = async (req, res) => {
       const result = await invoiceBatches.findOneAndUpdate(
         {
           _id: id,
-          "invoices.id": invoiceId,
+          "invoices._id": invoiceId,
         },
         {
           $set: { "invoices.$.status": "Posted" },
@@ -913,7 +913,7 @@ const postSingleInvoice = async (req, res) => {
     }
 
     const filterInvoice = invoiceBatch.invoices.filter(
-      (item) => item.id == invoiceId
+      (item) => item._id == invoiceId
     );
     if (!filterInvoice[0]) {
       return res
@@ -1052,7 +1052,7 @@ const postSingleInvoice = async (req, res) => {
           });
         } else {
           await invoiceBatches.updateOne(
-            { _id: id, "invoices.id": invoiceId },
+            { _id: id, "invoices._id": invoiceId },
             { $set: { "invoices.$.DocNumber": invoice.DocNumber } }
           );
           return res.status(200).json({
@@ -1357,7 +1357,7 @@ const confrimInvoice = async (req, res) => {
     await invoiceBatches.findOneAndUpdate(
       {
         _id: id,
-        "invoices.id": invoiceId,
+        "invoices._id": invoiceId,
       },
       {
         $set: {
@@ -1597,6 +1597,56 @@ const multipleInvoicePrint = async (req, res) => {
   }
 };
 
+function getDateAfterDays(dateStr, daysToAdd) {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + daysToAdd);
+  return date.toISOString().split("T")[0];
+}
+const payInvoicePayment = async (req, res) => {
+  const { _id: vendorId } = req.user;
+
+  try {
+    const { orderId, invoiceId, chargingStartDate } = req.body;
+    console.log(orderId, invoiceId, chargingStartDate);
+
+    if (!orderId || !vendorId || !chargingStartDate) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId, vendorId, and chargingStartDate are required.",
+      });
+    }
+    await invoiceBatches.findOneAndUpdate(
+      {
+        "invoices._id": invoiceId,
+      },
+      {
+        $set: {
+          "invoices.$.paymentStatus": "Paid",
+        },
+      },
+      { new: true }
+    );
+
+    await Order.findOneAndUpdate(
+      { _id: orderId, vendorId },
+      { chargingStartDate: getDateAfterDays(chargingStartDate, 2) },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice Payment Paid Successfully!",
+      // data: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating chargingStartDate:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
 module.exports = {
   generateInvoiceBatchNumber,
   confrimInvoiceBatchStatus,
@@ -1610,4 +1660,5 @@ module.exports = {
   postMulipleInvoice,
   confrimInvoice,
   multipleInvoicePrint,
+  payInvoicePayment,
 };

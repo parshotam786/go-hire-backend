@@ -37,6 +37,10 @@ const OrderSchema = new mongoose.Schema({
   orderDate: String,
   deliveryPlaceName: String,
   billingPlaceName: String,
+  paymentStatus: {
+    type: String,
+    default: "Unpaid",
+  },
   product: [ProductSchema],
   goods: String,
   total: String,

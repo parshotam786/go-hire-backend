@@ -13,6 +13,7 @@ const {
   postMulipleInvoice,
   confrimInvoice,
   multipleInvoicePrint,
+  payInvoicePayment,
 } = require("../controllers/invoiceBatches");
 
 router.post("/invoice-run", generateInvoiceBatchNumber);
@@ -31,5 +32,6 @@ router.post("/invoice-post", postSingleInvoice);
 router.post("/invoice-post-all", postMulipleInvoice);
 router.put("/invoice-status", confrimInvoiceBatchStatus);
 router.post("/invoice-confirmed", confrimInvoice);
+router.post("/invoice-payment-pay", payInvoicePayment);
 
 module.exports = router;

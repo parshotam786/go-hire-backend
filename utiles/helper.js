@@ -60,9 +60,16 @@ const percetageCalculate = (taxRate, price) => {
   return percentage + price;
 };
 
+function getDueDate(daysToAdd) {
+  let dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + daysToAdd);
+  return dueDate.toISOString().split("T")[0];
+}
+
 module.exports = {
   countWeekdaysBetweenDates,
   countDaysBetween,
   calculateProductPrice,
   percetageCalculate,
+  getDueDate,
 };

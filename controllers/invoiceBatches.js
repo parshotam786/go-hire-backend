@@ -13,16 +13,18 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const Handlebars = require("handlebars");
 const path = require("path");
-function getDueDate(daysToAdd) {
-  let dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + daysToAdd);
-  return dueDate.toISOString().split("T")[0];
-}
+
+// function getDueDate(daysToAdd) {
+//   let dueDate = new Date();
+//   dueDate.setDate(dueDate.getDate() + daysToAdd);
+//   return dueDate.toISOString().split("T")[0];
+// }
 const {
   countDaysBetween,
   countWeekdaysBetweenDates,
   calculateProductPrice,
   percetageCalculate,
+  getDueDate,
 } = require("../utiles/helper");
 const venderModel = require("../models/venderModel");
 
@@ -80,7 +82,6 @@ const generateInvoiceBatchNumber = async (req, res) => {
     );
 
     const isInvoiceExist = customerInvoices.map((item) => item.orderId);
-    console.log(isInvoiceExist);
     const sortedData = orders.filter((item) => item.invoiceInBatch === 0);
 
     for (const orderItem of sortedData) {
@@ -843,6 +844,7 @@ const createPdf = async (html) => {
 // post sigle invoice
 const postSingleInvoice = async (req, res) => {
   const { _id: vendorId } = req.user;
+
   try {
     const { id, invoiceId } = req.body;
 
@@ -921,6 +923,7 @@ const postSingleInvoice = async (req, res) => {
         .json({ success: false, message: "Invoice not found in this batch" });
     }
     const vender = await venderModel.findById(vendorId);
+    const isQuickBookAccountExist = vender.isQuickBook;
     const invoiceDetail = filterInvoice[0];
 
     const invoice = {
@@ -952,17 +955,7 @@ const postSingleInvoice = async (req, res) => {
       TotalAmt: invoiceDetail.vattotalPrice,
     };
     const existingRecord = await Quickbook.findOne({ vendorId });
-    const qbo = new QuickBooks(
-      process.env.CLIENT_ID,
-      process.env.CLIENT_SECRET,
-      existingRecord.accessToken,
-      false,
-      existingRecord.realmId,
-      true,
-      true,
-      existingRecord.refreshToken,
-      "2.0"
-    );
+    console.log({ existingRecord });
 
     const invoiceData = {
       brandLogo: vender.brandLogo,
@@ -1015,7 +1008,7 @@ const postSingleInvoice = async (req, res) => {
       },
     });
 
-    const templatePath = path.join(__dirname, "invoicePrint.html");
+    const templatePath = path.join(__dirname, "invoice.html");
     const templateHtml = fs.readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateHtml);
 
@@ -1043,24 +1036,38 @@ const postSingleInvoice = async (req, res) => {
     //   message: "Invoice Posted successfully!",
     //   success: true,
     // });
-
-    if (invoiceDetail.customerId != 0) {
-      qbo.createInvoice(invoice, async function (err, invoice) {
-        if (err) {
-          return res.send({
-            message: "AUTHENTICATION",
-          });
-        } else {
-          await invoiceBatches.updateOne(
-            { _id: id, "invoices._id": invoiceId },
-            { $set: { "invoices.$.DocNumber": invoice.DocNumber } }
-          );
-          return res.status(200).json({
-            message: "Invoice Posted successfully!",
-            success: true,
+    if (existingRecord != null) {
+      const qbo = new QuickBooks(
+        process.env.CLIENT_ID,
+        process.env.CLIENT_SECRET,
+        existingRecord.accessToken,
+        false,
+        existingRecord.realmId,
+        true,
+        true,
+        existingRecord.refreshToken,
+        "2.0"
+      );
+      if (isQuickBookAccountExist) {
+        if (invoiceDetail.customerId != 0) {
+          qbo.createInvoice(invoice, async function (err, invoice) {
+            if (err) {
+              return res.send({
+                message: "AUTHENTICATION",
+              });
+            } else {
+              await invoiceBatches.updateOne(
+                { _id: id, "invoices._id": invoiceId },
+                { $set: { "invoices.$.DocNumber": invoice.DocNumber } }
+              );
+              return res.status(200).json({
+                message: "Invoice Posted successfully!",
+                success: true,
+              });
+            }
           });
         }
-      });
+      }
     } else {
       return res.status(200).json({
         message: "Invoice Posted successfully!",
@@ -1069,14 +1076,16 @@ const postSingleInvoice = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching invoices by vendor ID:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error", error: error });
   }
 };
 const postMulipleInvoice = async (req, res) => {
   const { _id: vendorId } = req.user;
+
   try {
     const { id } = req.body;
 
+    // Find the invoice batch
     const invoiceBatch = await invoiceBatches.findById(id).populate({
       path: "orders",
       populate: [{ path: "products.product" }, { path: "customerId" }],
@@ -1085,210 +1094,385 @@ const postMulipleInvoice = async (req, res) => {
     if (!invoiceBatch) {
       return res.status(404).json({ message: "Invoice Batch not found" });
     }
-    const invoiceStatus = await invoiceBatches.findById({ vendorId, _id: id });
+
+    // Check invoice status
+    const invoiceStatus = await invoiceBatches.findOne({
+      vendorId,
+      _id: id,
+    });
 
     if (!invoiceStatus) {
       return res
         .status(404)
-        .send({ success: false, message: "InvoiceBatch not found" });
+        .json({ success: false, message: "Invoice Batch not found" });
     }
-    const isDraftInvocie = invoiceStatus.invoices.filter(
-      (item) => item.status == "Draft" || item.status === "Confirmed"
+
+    // Process draft or confirmed invoices
+    const draftInvoices = invoiceStatus.invoices.filter(
+      (item) => item.status === "Draft" || item.status === "Confirmed"
     );
 
-    for (const orderItem of isDraftInvocie) {
-      try {
-        console.log("Processing order:", orderItem);
-        const result = await Order.updateOne(
-          { _id: orderItem.id, vendorId: vendorId },
-          { $set: { invoiceInBatch: 0 } }
-        );
-        console.log("Update Result:", result);
-      } catch (err) {
-        console.error("Error updating order:", orderItem._id, err);
-      }
-    }
-    for await (let invoice of isDraftInvocie) {
-      if (invoice.status == "Draft") {
-        const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
+    for (const invoice of draftInvoices) {
+      // Reset invoiceInBatch for associated orders
+      await Order.updateOne(
+        { _id: invoice.id, vendorId },
+        { $set: { invoiceInBatch: 0 } }
+      );
 
+      // Update invoice status and assign a batch number for drafts
+      if (invoice.status === "Draft") {
+        const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
         await Document.findOneAndUpdate(
-          { name: "Invoice", vendorId: vendorId },
+          { name: "Invoice", vendorId },
           { $inc: { counter: 1 } },
           { new: true }
         );
         invoice.invocie = batchNumber;
-
-        invoice.status = "Posted";
-      } else {
-        invoice.status = "Posted";
       }
+      invoice.status = "Posted";
     }
 
-    //  else {
-    //   for (let invoice of invoiceStatus.invoices) {
-    //     invoice.status = "Posted";
-    //   }
-    // }
+    // Update batch status
     invoiceStatus.status = "Posted";
     await invoiceStatus.save();
-    const vender = await venderModel.findById(vendorId);
+
+    // Email and QuickBooks processing
+    const vendor = await venderModel.findById(vendorId);
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: "parshotamrughanii@gmail.com",
-        pass: "walz hskf huzy yljv",
+        pass: process.env.EMAIL_PASSWORD, // Use environment variables for sensitive data
       },
     });
+
     const existingRecord = await Quickbook.findOne({ vendorId });
-    const qbo = new QuickBooks(
-      process.env.CLIENT_ID,
-      process.env.CLIENT_SECRET,
-      existingRecord.accessToken,
-      false,
-      existingRecord.realmId,
-      true,
-      true,
-      existingRecord.refreshToken,
-      "2.0"
-    );
-    await Promise.all(
-      invoiceBatch.invoices.map(async (invoice) => {
+    const invoicesToPost = invoiceBatch.invoices;
+
+    for (const invoice of invoicesToPost) {
+      const customerEmail = invoice.customerEmail;
+      if (customerEmail) {
+        try {
+          const templatePath = path.join(__dirname, "invoicePrint.html");
+          const templateHtml = fs.readFileSync(templatePath, "utf8");
+          const template = Handlebars.compile(templateHtml);
+
+          const invoiceData = {
+            brandLogo: vendor.brandLogo,
+            invoiceDate: invoice.invoiceDate,
+            invoiceNumber: invoice.invocie,
+            products: invoice.product.map((item) => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total,
+            })),
+            totalPrice: invoice.total,
+          };
+
+          const htmlContent = template(invoiceData);
+          const pdfBuffer = await createPdf(htmlContent);
+
+          const mailOptions = {
+            from: "parshotamrughanii@gmail.com",
+            to: customerEmail,
+            subject: "Invoice Details",
+            text: `Dear ${invoice.customerName}, please find the attached invoice.`,
+            attachments: [
+              {
+                filename: `invoice_${invoice.invoiceNumber}.pdf`,
+                content: pdfBuffer,
+                contentType: "application/pdf",
+              },
+            ],
+          };
+
+          await transporter.sendMail(mailOptions);
+        } catch (error) {
+          console.error(`Error sending email to ${customerEmail}:`, error);
+        }
+      }
+
+      if (existingRecord) {
+        const qbo = new QuickBooks(
+          process.env.CLIENT_ID,
+          process.env.CLIENT_SECRET,
+          existingRecord.accessToken,
+          false,
+          existingRecord.realmId,
+          true,
+          true,
+          existingRecord.refreshToken,
+          "2.0"
+        );
+
         const invoicePost = {
           Line: invoice.product.map((item) => ({
             Description: item.productName,
             Amount: item.total,
             DetailType: "SalesItemLineDetail",
             SalesItemLineDetail: {
-              UnitPrice: item.vattotalPrice,
+              UnitPrice: item.price,
               Qty: item.quantity,
             },
           })),
           CustomerRef: {
-            value: `${invoice.customerId}`,
+            value: invoice.customerId,
             name: invoice.customerName,
           },
-          BillEmail: {
-            Address: invoice.customerEmail, // Customer's email
-          },
-          BillAddr: {
-            Line1: invoice.customerAddress,
-            City: invoice.customerCity,
-            PostalCode: invoice.customerCountry,
-          },
-          SalesTermRef: {
-            value: "1",
-          },
-          DueDate: getDueDate(Number(invoice.paymentTerms)),
-          TotalAmt: invoice.vattotalPrice,
+          TotalAmt: invoice.total,
         };
-        const customerEmail = invoice.customerEmail;
-        if (customerEmail) {
-          const templatePath = path.join(__dirname, "invoicePrint.html");
-          const templateHtml = fs.readFileSync(templatePath, "utf8");
-          const template = Handlebars.compile(templateHtml);
-          const invoiceData = {
-            brandLogo: vender.brandLogo,
-            invoiceDate: invoice.invoiceDate,
-            invoiceNumber: invoice.invocie,
-            deliveryAddress: invoice.deliveryAddress,
-            customerName: invoice.customerName,
-            customerAddress: invoice.customerAddress,
-            customerCity: invoice.customerCity,
-            customerCountry: invoice.customerCountry,
-            customerPostCode: "",
-            // collectionChargeAmount:
-            //   collectionChargeAmount != 0
-            //     ? `A delivery fee of $${collectionChargeAmount} may apply, based on your location and order details.`
-            //     : "",
-            // collectionCharge:
-            //   collectionChargeAmount != 0
-            //     ? `A collection fee of $${collectionChargeAmount} may apply, based on your location and order details.`
-            //     : "",
-            customerEmail: invoice.customerEmail,
-            orderId: invoice.orderId,
-            orderType: "invoice.deliveryNote",
-            orderNumber: invoice.orderNumber,
-            deliveryDate: invoice.deliveryDate,
-            orderDate: invoice.orderDate,
-            deliveryPlaceName: invoice.deliveryPlaceName,
-            products: invoice.product.map((item) => {
-              return {
-                productName: item.productName,
-                quantity: item.quantity,
-                type: item.type,
-                days: item.days,
-                weeks: item.weeks,
-                minimumRentalPeriod: item.minimumRentalPeriod,
-                price: item.price,
-                vat: item.vat,
-                total: item.total,
-              };
-            }),
-            vattotalPrice: invoice.total,
-            totalPrice: invoice.goods,
-            vatTotal: invoice.tax,
-          };
 
-          const htmlContent = template(invoiceData);
-
-          const pdfBuffer = await createPdf(htmlContent);
-
-          const mailOptions = {
-            from: "parshotamrughanii@gmail.com",
-            to: invoiceData.customerEmail,
-            subject: "Invoice Details",
-            text: `Dear ${invoiceData.customerEmail}, please find the invoice details attached.`,
-            attachments: [
-              {
-                filename: `invoice_${invoiceData.invoiceNumber}.pdf`,
-                content: pdfBuffer,
-                contentType: "application/pdf",
-              },
-            ],
-          };
-          if (invoice.customerId != 0) {
-            qbo.createInvoice(invoicePost, async function (err, invoices) {
-              if (err) {
-                return res.send({
-                  message: err,
-                });
-              } else {
-                await invoiceBatches.updateOne(
-                  { _id: id, "invoices.id": invoice.id },
-                  { $set: { "invoices.$.DocNumber": invoices.DocNumber } }
-                );
-                // return res.status(200).json({
-                //   message: "Invoice Posted and Save successfully!",
-                //   success: true,
-                // });
-              }
-            });
-          } else {
-            return res.status(200).json({
-              message: "Invoice Posted successfully!",
-              success: true,
-            });
-          }
-
-          try {
-            await transporter.sendMail(mailOptions);
-          } catch (error) {
-            console.error(`Error sending email to ${customerEmail}:`, error);
-          }
+        try {
+          qbo.createInvoice(invoicePost, async (err, quickBookInvoice) => {
+            if (!err) {
+              await invoiceBatches.updateOne(
+                { _id: id, "invoices.id": invoice.id },
+                { $set: { "invoices.$.DocNumber": quickBookInvoice.DocNumber } }
+              );
+            } else {
+              console.error("QuickBooks Error:", err);
+            }
+          });
+        } catch (error) {
+          console.error("QuickBooks API error:", error);
         }
-      })
-    );
+      }
+    }
 
     res.status(200).json({
-      message: "Invoice Posted successfully!",
+      message: "Invoices processed and posted successfully!",
       success: true,
     });
   } catch (error) {
-    console.error("Error fetching invoices by vendor ID:", error);
+    console.error("Error processing invoices:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// const postMulipleInvoice = async (req, res) => {
+//   const { _id: vendorId } = req.user;
+//   try {
+//     const { id } = req.body;
+
+//     const invoiceBatch = await invoiceBatches.findById(id).populate({
+//       path: "orders",
+//       populate: [{ path: "products.product" }, { path: "customerId" }],
+//     });
+
+//     if (!invoiceBatch) {
+//       return res.status(404).json({ message: "Invoice Batch not found" });
+//     }
+//     const invoiceStatus = await invoiceBatches.findById({ vendorId, _id: id });
+
+//     if (!invoiceStatus) {
+//       return res
+//         .status(404)
+//         .send({ success: false, message: "InvoiceBatch not found" });
+//     }
+//     const isDraftInvocie = invoiceStatus.invoices.filter(
+//       (item) => item.status == "Draft" || item.status === "Confirmed"
+//     );
+
+//     for (const orderItem of isDraftInvocie) {
+//       try {
+//         console.log("Processing order:", orderItem);
+//         const result = await Order.updateOne(
+//           { _id: orderItem.id, vendorId: vendorId },
+//           { $set: { invoiceInBatch: 0 } }
+//         );
+//         console.log("Update Result:", result);
+//       } catch (err) {
+//         console.error("Error updating order:", orderItem._id, err);
+//       }
+//     }
+//     for await (let invoice of isDraftInvocie) {
+//       if (invoice.status == "Draft") {
+//         const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
+
+//         await Document.findOneAndUpdate(
+//           { name: "Invoice", vendorId: vendorId },
+//           { $inc: { counter: 1 } },
+//           { new: true }
+//         );
+//         invoice.invocie = batchNumber;
+
+//         invoice.status = "Posted";
+//       } else {
+//         invoice.status = "Posted";
+//       }
+//     }
+
+//     //  else {
+//     //   for (let invoice of invoiceStatus.invoices) {
+//     //     invoice.status = "Posted";
+//     //   }
+//     // }
+//     invoiceStatus.status = "Posted";
+//     await invoiceStatus.save();
+//     const vender = await venderModel.findById(vendorId);
+//     const transporter = nodemailer.createTransport({
+//       service: "gmail",
+//       auth: {
+//         user: "parshotamrughanii@gmail.com",
+//         pass: "walz hskf huzy yljv",
+//       },
+//     });
+//     const existingRecord = await Quickbook.findOne({ vendorId });
+
+//     await Promise.all(
+//       invoiceBatch.invoices.map(async (invoice) => {
+//         const invoicePost = {
+//           Line: invoice.product.map((item) => ({
+//             Description: item.productName,
+//             Amount: item.total,
+//             DetailType: "SalesItemLineDetail",
+//             SalesItemLineDetail: {
+//               UnitPrice: item.vattotalPrice,
+//               Qty: item.quantity,
+//             },
+//           })),
+//           CustomerRef: {
+//             value: `${invoice.customerId}`,
+//             name: invoice.customerName,
+//           },
+//           BillEmail: {
+//             Address: invoice.customerEmail, // Customer's email
+//           },
+//           BillAddr: {
+//             Line1: invoice.customerAddress,
+//             City: invoice.customerCity,
+//             PostalCode: invoice.customerCountry,
+//           },
+//           SalesTermRef: {
+//             value: "1",
+//           },
+//           DueDate: getDueDate(Number(invoice.paymentTerms)),
+//           TotalAmt: invoice.vattotalPrice,
+//         };
+//         const customerEmail = invoice.customerEmail;
+//         if (customerEmail) {
+//           const templatePath = path.join(__dirname, "invoicePrint.html");
+//           const templateHtml = fs.readFileSync(templatePath, "utf8");
+//           const template = Handlebars.compile(templateHtml);
+//           const invoiceData = {
+//             brandLogo: vender.brandLogo,
+//             invoiceDate: invoice.invoiceDate,
+//             invoiceNumber: invoice.invocie,
+//             deliveryAddress: invoice.deliveryAddress,
+//             customerName: invoice.customerName,
+//             customerAddress: invoice.customerAddress,
+//             customerCity: invoice.customerCity,
+//             customerCountry: invoice.customerCountry,
+//             customerPostCode: "",
+//             // collectionChargeAmount:
+//             //   collectionChargeAmount != 0
+//             //     ? `A delivery fee of $${collectionChargeAmount} may apply, based on your location and order details.`
+//             //     : "",
+//             // collectionCharge:
+//             //   collectionChargeAmount != 0
+//             //     ? `A collection fee of $${collectionChargeAmount} may apply, based on your location and order details.`
+//             //     : "",
+//             customerEmail: invoice.customerEmail,
+//             orderId: invoice.orderId,
+//             orderType: "invoice.deliveryNote",
+//             orderNumber: invoice.orderNumber,
+//             deliveryDate: invoice.deliveryDate,
+//             orderDate: invoice.orderDate,
+//             deliveryPlaceName: invoice.deliveryPlaceName,
+//             products: invoice.product.map((item) => {
+//               return {
+//                 productName: item.productName,
+//                 quantity: item.quantity,
+//                 type: item.type,
+//                 days: item.days,
+//                 weeks: item.weeks,
+//                 minimumRentalPeriod: item.minimumRentalPeriod,
+//                 price: item.price,
+//                 vat: item.vat,
+//                 total: item.total,
+//               };
+//             }),
+//             vattotalPrice: invoice.total,
+//             totalPrice: invoice.goods,
+//             vatTotal: invoice.tax,
+//           };
+
+//           const htmlContent = template(invoiceData);
+
+//           const pdfBuffer = await createPdf(htmlContent);
+
+//           const mailOptions = {
+//             from: "parshotamrughanii@gmail.com",
+//             to: invoiceData.customerEmail,
+//             subject: "Invoice Details",
+//             text: `Dear ${invoiceData.customerEmail}, please find the invoice details attached.`,
+//             attachments: [
+//               {
+//                 filename: `invoice_${invoiceData.invoiceNumber}.pdf`,
+//                 content: pdfBuffer,
+//                 contentType: "application/pdf",
+//               },
+//             ],
+//           };
+//           if (existingRecord != null) {
+//             const qbo = new QuickBooks(
+//               process.env.CLIENT_ID,
+//               process.env.CLIENT_SECRET,
+//               existingRecord.accessToken,
+//               false,
+//               existingRecord.realmId,
+//               true,
+//               true,
+//               existingRecord.refreshToken,
+//               "2.0"
+//             );
+
+//             if (isQuickBookAccountExist) {
+//               if (invoice.customerId != 0) {
+//                 qbo.createInvoice(invoicePost, async function (err, invoices) {
+//                   if (err) {
+//                     return res.send({
+//                       message: err,
+//                     });
+//                   } else {
+//                     await invoiceBatches.updateOne(
+//                       { _id: id, "invoices.id": invoice.id },
+//                       { $set: { "invoices.$.DocNumber": invoices.DocNumber } }
+//                     );
+//                     // return res.status(200).json({
+//                     //   message: "Invoice Posted and Save successfully!",
+//                     //   success: true,
+//                     // });
+//                   }
+//                 });
+//               }
+//             }
+//           } else {
+//             return res.status(200).json({
+//               message: "Invoice Posted successfully!",
+//               success: true,
+//             });
+//           }
+
+//           try {
+//             await transporter.sendMail(mailOptions);
+//           } catch (error) {
+//             console.error(`Error sending email to ${customerEmail}:`, error);
+//           }
+//         }
+//       })
+//     );
+
+//     res.status(200).json({
+//       message: "Invoice Posted successfully!",
+//       success: true,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching invoices by vendor ID:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
 
 const confrimInvoiceBatchStatus = async (req, res) => {
   const { _id: vendorId } = req.user;
@@ -1377,6 +1561,8 @@ const confrimInvoice = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
+//**********/ print invoice **********
 const invoicePrint = async (req, res) => {
   const { _id: vendorId } = req.user;
   try {
@@ -1393,15 +1579,15 @@ const invoicePrint = async (req, res) => {
     }
 
     const filterInvoice = invoiceBatch.invoices.filter(
-      (item) => item.id == invoiceId
+      (item) => item._id == invoiceId
     );
     if (!filterInvoice[0]) {
       return res
         .status(404)
-        .json({ success: false, message: "Invoice not found in this batch" });
+        .json({ message: "Invoice not found in this batch" });
     }
-    const invoiceDetail = filterInvoice[0];
 
+    const invoiceDetail = filterInvoice[0];
     const invoiceData = {
       brandLogo: vender.brandLogo,
       invoiceDate: invoiceDetail.invoiceDate,
@@ -1412,89 +1598,77 @@ const invoicePrint = async (req, res) => {
       customerCity: invoiceDetail.customerCity,
       customerCountry: invoiceDetail.customerCountry,
       customerPostCode: "",
-      // collectionChargeAmount:
-      //   collectionChargeAmount != 0
-      //     ? `A delivery fee of $${collectionChargeAmount} may apply, based on your location and order details.`
-      //     : "",
-      // collectionCharge:
-      //   collectionChargeAmount != 0
-      //     ? `A collection fee of $${collectionChargeAmount} may apply, based on your location and order details.`
-      //     : "",
       customerEmail: invoiceDetail.customerEmail,
       orderId: invoiceDetail.orderId,
-      orderType: "invoiceDetail.deliveryNote",
+      orderType: invoiceDetail.deliveryNote,
       orderNumber: invoiceDetail.orderNumber,
       deliveryDate: invoiceDetail.deliveryDate,
       orderDate: invoiceDetail.orderDate,
       deliveryPlaceName: invoiceDetail.deliveryPlaceName,
-      products: invoiceDetail.product.map((item) => {
-        return {
-          productName: item.productName,
-          quantity: item.quantity,
-          type: item.type,
-          days: item.days,
-          weeks: item.weeks,
-          minimumRentalPeriod: item.minimumRentalPeriod,
-          price: item.price,
-          vat: item.vat,
-          total: item.total,
-        };
-      }),
+      products: (invoiceDetail.product || []).map((item) => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        type: item.type,
+        days: item.days,
+        weeks: item.weeks,
+        minimumRentalPeriod: item.minimumRentalPeriod,
+        price: item.price,
+        vat: item.vat,
+        total: item.total,
+      })),
       vattotalPrice: invoiceDetail.total,
       totalPrice: invoiceDetail.goods,
       vatTotal: invoiceDetail.tax,
     };
 
-    const templatePath = path.join(__dirname, "invoicePrint.html");
+    const templatePath = path.join(__dirname, "invoice.html");
     const templateHtml = fs.readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateHtml);
     const html = template(invoiceData);
 
-    const browser = await puppeteer.launch({
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--remote-debugging-port=9222",
-      ],
-    });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    let pathname = `${invoiceDetail.invocie}-${Date.now()}.pdf`;
-    const pdfPath = path.join(
-      __dirname.replace("/controllers", ""),
-      "pdfs",
-      pathname
-    );
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      scale: 0.8,
-      quality: 75,
-    });
-    await browser.close();
-
-    setTimeout(() => {
-      fs.unlink(pdfPath, (err) => {
-        if (err) {
-          console.error(`Failed to delete file: ${pdfPath}`, err);
-        } else {
-          console.log(`Successfully deleted file: ${pdfPath}`);
-        }
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        executablePath: "/snap/bin/chromium",
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
-    }, 3000);
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
-    res.json({ url: pdfUrl });
+      let pathname = `${invoiceDetail.invocie}-${Date.now()}.pdf`;
+      const pdfPath = path.join(
+        __dirname.replace("/controllers", ""),
+        "pdfs",
+        pathname
+      );
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        scale: 0.8,
+      });
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
+      res.json({ url: pdfUrl });
+
+      // Schedule file deletion
+      setTimeout(() => {
+        fs.unlink(pdfPath, (err) => {
+          if (err) console.error(`Failed to delete file: ${pdfPath}`, err);
+          else console.log(`Successfully deleted file: ${pdfPath}`);
+        });
+      }, 60000);
+    } finally {
+      if (browser) await browser.close();
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error!" });
   }
 };
+
 const multipleInvoicePrint = async (req, res) => {
   const { _id: vendorId } = req.user;
   try {
@@ -1550,13 +1724,9 @@ const multipleInvoicePrint = async (req, res) => {
     const html = template({ invoices: invoiceData });
 
     const browser = await puppeteer.launch({
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--remote-debugging-port=9222",
-      ],
+      executablePath: "/snap/bin/chromium",
+      headless: false,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -1586,9 +1756,9 @@ const multipleInvoicePrint = async (req, res) => {
           console.log(`Successfully deleted file: ${pdfPath}`);
         }
       });
-    }, 30000);
+    }, 60000);
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const baseUrl = `https://${req.get("host")}`;
     const pdfUrl = `${baseUrl}/pdfs/${pathname}`;
     res.json({ url: pdfUrl, name: invoiceBatch.name });
   } catch (error) {

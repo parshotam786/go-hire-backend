@@ -1,58 +1,77 @@
 const mongoose = require("mongoose");
 
+// const mongoose = require("mongoose");
+// const bcrypt = require("bcrypt");
+
+// const subVendorSchema = new mongoose.Schema(
+//   {
+//     name: { type: String, required: true },
+//     email: { type: String,  unique: true },
+//     password: { type: String, required: true },
+//     role: {
+//       type: String,
+//       enum: ["Editor", "Operator"],
+//       default: "Operator",
+//     },
+//     vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+//     token: { type: String },
+//     accountStatus: {
+//       type: Boolean,
+//       default: true,
+//     },
+//   },
+//   { timestamps: true }
+// );
+
+// // Hash password before saving
+// subVendorSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) return next();
+//   this.password = await bcrypt.hash(this.password, 10);
+//   next();
+// });
+
+// module.exports = mongoose.model("SubVendor", subVendorSchema);
+
 const VenderSchema = new mongoose.Schema(
   {
     companyName: {
       type: String,
-      required: true,
     },
     legalName: {
       type: String,
-      required: true,
     },
     businessType: {
       type: String,
-      required: true,
     },
     taxId: {
       type: String,
-      required: true,
     },
     primaryContact: {
       type: String,
-      required: true,
     },
     primaryPhone: {
       type: String,
-      required: true,
     },
     password: {
       type: String,
-      required: true,
     },
     email: {
       type: String,
-      required: true,
     },
     street: {
       type: String,
-      required: true,
     },
     city: {
       type: String,
-      required: true,
     },
     state: {
       type: String,
-      required: true,
     },
     zip: {
       type: String,
-      required: true,
     },
     country: {
       type: String,
-      required: true,
     },
     bankName: {
       type: String,
@@ -80,15 +99,12 @@ const VenderSchema = new mongoose.Schema(
     },
     declaration: {
       type: String,
-      required: true,
     },
     signature: {
       type: String,
-      required: true,
     },
     name: {
       type: String,
-      required: true,
     },
     profile_Picture: {
       type: String,
@@ -101,11 +117,15 @@ const VenderSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "Seller",
+      enum: ["Seller", "Admin", "Editor", "Operator"],
     },
 
     isQuickBook: {
       type: Boolean,
       default: false,
+    },
+    accountStatus: {
+      type: Boolean,
     },
     status: {
       type: String,
@@ -114,6 +134,21 @@ const VenderSchema = new mongoose.Schema(
     rating: {
       type: Number,
     },
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vender",
+      default: null,
+    },
+    // permissions:[{
+    //   type:
+    // }]
+
+    // subAccounts: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "SubVendor",
+    //   },
+    // ],
   },
   { timestamps: true }
 );

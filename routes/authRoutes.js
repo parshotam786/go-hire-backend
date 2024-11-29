@@ -80,8 +80,8 @@ router.delete("/vender/invoice/list/view/:id", deleteInvoice);
 router.get(
   "/vendor/stats",
   authenticateUser,
-  require("./orderRoutes"),
-  allowedRoles(["Seller"]),
+  // require("./orderRoutes"),
+  // allowedRoles(["Seller", "Editor", "Operator"]),
   getVendorDashboardStats
 );
 

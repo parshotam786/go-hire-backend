@@ -125,7 +125,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
             ];
 
             const daysInWeek = Number(item?.rentalDaysPerWeek);
-            const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+            const minimumRentailPeriod = 1; // Number(item?.minimumRentalPeriod);
             const productTotalPrice = calculateProductPrice(
               item?.price,
               daysCount,
@@ -244,7 +244,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
             ];
 
             const daysInWeek = Number(item?.rentalDaysPerWeek);
-            const minimumRentailPeriod = Number(item?.minimumRentalPeriod);
+            const minimumRentailPeriod = 1; // Number(item?.minimumRentalPeriod);
             const productTotalPrice = calculateProductPrice(
               item?.price,
               daysCount,

@@ -13,7 +13,8 @@ const authenticateUser = async (req, res, next) => {
     // Verify the token
     const decoded = jwt.verify(token, "your_jwt_secret");
 
-    req.user = await venderModel.findById(decoded?._id); // Attach user data to the request object
+    const user = await venderModel.findById(decoded?._id); // Attach user data to the request object
+    req.user = user?.role == "Editor" ? { ...user, id: user?.vendor } : user;
 
     next(); // Proceed to the next middleware or route handler
   } catch (error) {

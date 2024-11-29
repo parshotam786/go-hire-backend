@@ -60,6 +60,11 @@ app.use(
   authenticateUser,
   require("./routes/rateDifinitionRoutes")
 );
+app.use(
+  "/api/sub-vendor",
+  authenticateUser,
+  require("./routes/subVendorRoutes")
+);
 app.use("/api/invoice", authenticateUser, require("./routes/invoiceBatches"));
 app.use("/api/document", authenticateUser, require("./routes/documentRoutes"));
 app.use(

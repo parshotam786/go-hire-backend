@@ -303,6 +303,8 @@ const VenderLogin = async (req, res) => {
       message: "Login successful",
       token,
       user: {
+        // _id: vender.vendor === null ? vender.id : vender.vendor,
+
         _id: vender.id,
         name: vender.name,
         email: vender.email,
@@ -336,6 +338,232 @@ const VenderLogin = async (req, res) => {
     res.status(500).send({ error: err.message });
   }
 };
+// const VenderLogin = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     console.log("Request body:", { email, password });
+
+//     // Check if email matches a vendor
+//     let vender = await Vender.findOne({ email });
+
+//     // If not found as a vendor, search in subAccounts
+//     let subAccount = null;
+//     if (!vender) {
+//       let venderaa = await Vender.find().populate("subAccounts");
+//       if (venderaa) {
+//         subAccount = venderaa
+//           .flatMap((vendor) => vendor.subAccounts)
+//           .find((sub) => sub.email === email);
+//         console.log("SubAccount found:", subAccount);
+//       }
+//     }
+//     let s = subAccount.email;
+//     console.log({ subAccount, vender, s });
+//     // If neither vendor nor subAccount found
+//     // if (!vender || (subAccount && !subAccount.email)) {
+//     //   return res.status(400).send({ message: "Invalid email or password" });
+//     // }
+
+//     // Determine which account to authenticate
+//     const accountToAuthenticate = subAccount || vender;
+
+//     // Check if the account exists
+//     if (!accountToAuthenticate) {
+//       return res.status(400).send({ message: "Invalid email or password" });
+//     }
+
+//     console.log("Account to authenticate:", accountToAuthenticate);
+
+//     const isMatch = await bcrypt.compare(
+//       password,
+//       accountToAuthenticate.password
+//     );
+//     if (!isMatch) {
+//       return res.status(400).send({ message: "Invalid email or password" });
+//     }
+//     const id = accountToAuthenticate._id;
+//     const role = accountToAuthenticate.role;
+//     console.log({ id });
+//     const token = jwt.sign(
+//       {
+//         _id: id,
+//         role: role,
+//       },
+//       "your_jwt_secret",
+//       { expiresIn: "30d" }
+//     );
+
+//     // Build response for vendor or subAccount
+//     if (!subAccount) {
+//       // Vendor Response
+//       res.send({
+//         message: "Login successful",
+//         token,
+//         user: {
+//           _id: vender.id,
+//           name: vender.name,
+//           email: vender.email,
+//           companyName: vender.companyName,
+//           legalName: vender.legalName,
+//           businessType: vender.businessType,
+//           taxId: vender.taxId,
+//           primaryContact: vender.primaryContact,
+//           primaryPhone: vender.primaryPhone,
+//           street: vender.street,
+//           city: vender.city,
+//           state: vender.state,
+//           zip: vender.zip,
+//           country: vender.country,
+//           bankName: vender.bankName,
+//           bankAddress: vender.bankAddress,
+//           accountName: vender.accountName,
+//           accountNumber: vender.accountNumber,
+//           swiftCode: vender.swiftCode,
+//           iban: vender.iban,
+//           declaration: vender.declaration,
+//           profile_Picture: vender.profile_Picture,
+//           signature: vender.signature,
+//           role: vender.role,
+//           status: vender.status,
+//         },
+//         role: vender.role,
+//         status: vender.status,
+//       });
+//     } else {
+//       // SubAccount Response
+//       res.send({
+//         message: "Login successful",
+//         token,
+//         user: {
+//           _id: subAccount._id,
+//           name: subAccount.name,
+//           email: subAccount.email,
+//           role: subAccount.role,
+//           parentVendorId: vender._id,
+//           parentVendorName: vender.companyName,
+//         },
+//         role: subAccount.role,
+//       });
+//     }
+//   } catch (err) {
+//     console.error("Error during login:", err);
+//     res.status(500).send({ error: err.message });
+//   }
+// };
+// const VenderLogin = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     console.log("Request body:", { email, password });
+
+//     // Check if email matches a vendor
+//     let vender = await Vender.findOne({ email });
+
+//     // If not found as a vendor, search in subAccounts
+//     let subAccount = null;
+//     if (!vender) {
+//       let venderaa = await Vender.find().populate("subAccounts");
+//       if (venderaa) {
+//         subAccount = venderaa
+//           .flatMap((vendor) => vendor.subAccounts)
+//           .find((sub) => sub.email === email);
+//         console.log("SubAccount found:", subAccount);
+//       }
+//     }
+
+//     // If neither vendor nor subAccount found, return an error
+//     if (!vender && !subAccount) {
+//       return res.status(400).send({ message: "Invalid email or password" });
+//     }
+
+//     // Determine which account to authenticate
+//     const accountToAuthenticate = subAccount || vender;
+//     console.log({ accountToAuthenticate });
+
+//     // If accountToAuthenticate is null or undefined, return an error
+//     if (!accountToAuthenticate) {
+//       return res.status(400).send({ message: "Invalid email or password" });
+//     }
+
+//     // Check password match
+//     const isMatch = await bcrypt.compare(
+//       password,
+//       accountToAuthenticate.password
+//     );
+//     if (!isMatch) {
+//       return res.status(400).send({ message: "Invalid email or password" });
+//     }
+
+//     const id = accountToAuthenticate._id;
+//     const role = accountToAuthenticate.role;
+
+//     const token = jwt.sign(
+//       {
+//         _id: id,
+//         role: role,
+//       },
+//       "your_jwt_secret",
+//       { expiresIn: "30d" }
+//     );
+
+//     // Build response for vendor or subAccount
+//     if (!subAccount) {
+//       // Vendor Response
+//       res.send({
+//         message: "Login successful",
+//         token,
+//         user: {
+//           _id: id,
+//           name: vender.name,
+//           email: vender.email,
+//           companyName: vender.companyName,
+//           legalName: vender.legalName,
+//           businessType: vender.businessType,
+//           taxId: vender.taxId,
+//           primaryContact: vender.primaryContact,
+//           primaryPhone: vender.primaryPhone,
+//           street: vender.street,
+//           city: vender.city,
+//           state: vender.state,
+//           zip: vender.zip,
+//           country: vender.country,
+//           bankName: vender.bankName,
+//           bankAddress: vender.bankAddress,
+//           accountName: vender.accountName,
+//           accountNumber: vender.accountNumber,
+//           swiftCode: vender.swiftCode,
+//           iban: vender.iban,
+//           declaration: vender.declaration,
+//           profile_Picture: vender.profile_Picture,
+//           signature: vender.signature,
+//           role: vender.role,
+//           status: vender.status,
+//         },
+//         role: vender.role,
+//         status: vender.status,
+//       });
+//     } else {
+//       // SubAccount Response
+//       res.send({
+//         message: "Login successful",
+//         token,
+//         user: {
+//           _id: subAccount.venderId,
+//           name: subAccount.name,
+//           email: subAccount.email,
+//           role: subAccount.role,
+//           subAccountId: subAccount._id,
+//           // parentVendorName: vender.companyName,
+//         },
+//         role: subAccount.role,
+//       });
+//     }
+//   } catch (err) {
+//     console.error("Error during login:", err);
+//     res.status(500).send({ error: err.message });
+//   }
+// };
 
 // vender status update
 const updateVenderStatus = async (req, res) => {
@@ -383,6 +611,7 @@ const VenderDirectory = async (req, res) => {
 };
 
 const UserProfile = async (req, res) => {
+  console.log(req.params.id);
   try {
     const vender = await Vender.findById(req.params.id).select("-password");
     if (vender) {
@@ -601,7 +830,10 @@ const removeVenderAccount = async (req, res) => {
 };
 
 const getVendorDashboardStats = async (req, res) => {
-  const vendorId = req.user._id;
+  // const vendorId = req.user._id;
+  const vendorId = ["Editor", "Operator"].includes(req.user?._doc?.role)
+    ? req.user._doc.vendor
+    : req.user._id;
 
   try {
     const statsData = await Vender.aggregate([

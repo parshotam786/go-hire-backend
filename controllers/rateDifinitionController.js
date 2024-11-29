@@ -110,7 +110,10 @@ const getRateDefinitionController = async (req, res) => {
 };
 
 const getRateDefinitionList = async (req, res) => {
-  const vendorId = req.user._id;
+  const vendorId = ["Editor", "Operator"].includes(req.user?._doc?.role)
+    ? req.user._doc.vendor
+    : req.user._id;
+  // const vendorId = req.user._id;
   try {
     if (!vendorId) {
       return res.status(400).json({ message: "vendorId is required" });

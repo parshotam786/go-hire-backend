@@ -117,7 +117,7 @@ const VenderSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "Seller",
-      enum: ["Seller", "Admin", "Editor", "Operator"],
+      // enum: ["Seller", "Admin", "Editor", "Operator"],
     },
 
     isQuickBook: {
@@ -126,6 +126,7 @@ const VenderSchema = new mongoose.Schema(
     },
     accountStatus: {
       type: Boolean,
+      default: true,
     },
     status: {
       type: String,
@@ -139,9 +140,11 @@ const VenderSchema = new mongoose.Schema(
       ref: "Vender",
       default: null,
     },
-    // permissions:[{
-    //   type:
-    // }]
+    permissions: [
+      {
+        type: String,
+      },
+    ],
 
     // subAccounts: [
     //   {

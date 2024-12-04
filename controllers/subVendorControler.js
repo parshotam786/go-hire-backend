@@ -4,22 +4,19 @@ const crypto = require("crypto");
 const venderModel = require("../models/venderModel");
 const subVendorSchema = require("../models/subVendorSchema");
 const bcrypt = require("bcryptjs");
-// Function to generate random password
-// const generatePassword = () => crypto.randomBytes(8).toString("hex");
+const roles = require("../models/roles");
 
-// Create Editor or Operator
 exports.createEditorOrOperator = async (req, res) => {
   try {
-    const { name, email, role, password, isActive } = req.body;
-    const vendorId = req.user._id; // Assuming vendor is logged in
+    const { name, email, permissions, role, password, isActive } = req.body;
+    const vendorId = req.user._id;
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    // Validate role
-    if (!["Editor", "Operator"].includes(role)) {
+    const roleExist = (await roles.find()).map((item) => item.name);
+    if (!roleExist.includes(role)) {
       return res.status(400).json({ success: false, message: "Invalid role" });
     }
 
-    // Check if email already exists
     const existingUser = await venderModel.findOne({ email });
     const VendorData = await venderModel.findOne({ _id: vendorId });
     console.log(VendorData.status);
@@ -29,35 +26,26 @@ exports.createEditorOrOperator = async (req, res) => {
         .json({ success: false, message: "Email already in use" });
     }
 
-    // Generate random password
-
-    // Create user
     const newUser = await venderModel.create({
       legalName: name,
       email,
       password: hashedPassword,
+      permissions,
       role,
       status: VendorData.status,
       vendor: vendorId,
       accountStatus: isActive,
     });
 
-    // Generate JWT token
     const token = jwt.sign(
       { _id: newUser._id, role: newUser.role },
       "your_jwt_secret",
       { expiresIn: "7d" }
     );
 
-    // Save token and update vendor's subAccounts
     newUser.token = token;
     await newUser.save();
 
-    // const vendor = await venderModel.findById(vendorId);
-    // vendor.subAccounts.push(newUser._id);
-    // await vendor.save();
-
-    // Send email with credentials
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -85,26 +73,89 @@ exports.createEditorOrOperator = async (req, res) => {
     res.status(500).json({ message: "Server error", details: error.message });
   }
 };
+exports.getUserProfile = async (req, res) => {
+  try {
+    const vendorId = req.user._id;
+    const userId = req.params.id;
+
+    const user = await venderModel
+      .findById({ vendor: vendorId, _id: userId })
+      .select("-password -token");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User profile retrieved successfully",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      details: error.message,
+    });
+  }
+};
+
+exports.updateUserRolesAndPermissions = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const vendorId = req.user._id;
+    const { permissions, role, isActive } = req.body;
+
+    // Check if user exists
+    const user = await venderModel.findById({ vendor: vendorId, _id: userId });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (permissions) user.permissions = permissions;
+    if (role) user.role = role;
+    if (typeof isActive !== "undefined") user.accountStatus = isActive;
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User Role & Permissions updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    // Handle server errors
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      details: error.message,
+    });
+  }
+};
 
 // Get all Editors or Operators with pagination and search
 exports.getAllSubVendor = async (req, res) => {
   try {
     const vendorId = req.user._id;
     const { page = 1, limit = 10, search = "" } = req.query;
-
+    const roleExist = (await roles.find()).map((item) => item.name);
     const skip = (page - 1) * limit;
 
     const query = {
-      vendorId,
-      role: { $in: ["Editor", "Operator"] },
+      vendor: vendorId,
+      role: { $in: roleExist },
       $or: [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
       ],
     };
 
-    const total = await subVendorSchema.countDocuments(query);
-    const users = await subVendorSchema
+    const total = await venderModel.countDocuments(query);
+    const users = await venderModel
       .find(query)
       .skip(skip)
       .limit(parseInt(limit))
@@ -131,7 +182,7 @@ exports.updateSubVendorStatus = async (req, res) => {
   const { id, accountStatus } = req.body;
 
   try {
-    const SubVendor = await subVendorSchema.findById({ vendorId, _id: id });
+    const SubVendor = await venderModel.findById({ vendor: vendorId, _id: id });
 
     if (!SubVendor) {
       return res

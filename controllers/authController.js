@@ -10,6 +10,7 @@ const Documents = require("../models/documentNumber");
 const { errorResponse, successResponse } = require("../utiles/responses");
 const { default: mongoose } = require("mongoose");
 const ListValue = require("../models/listOfValues");
+const roles = require("../models/roles");
 
 // Admin registration
 const AdminRegister = async (req, res) => {
@@ -290,9 +291,15 @@ const VenderLogin = async (req, res) => {
     if (!vender) {
       return res.status(400).send({ message: "Invalid email or password" });
     }
+
     const isMatch = await bcrypt.compare(password, vender.password);
     if (!isMatch) {
       return res.status(400).send({ message: "Invalid email or password" });
+    }
+    if (!vender.accountStatus) {
+      return res
+        .status(400)
+        .send({ success: false, message: "Your account has been disabled!" });
     }
     const token = jwt.sign(
       { _id: vender._id, role: vender.role },
@@ -324,6 +331,7 @@ const VenderLogin = async (req, res) => {
         accountName: vender.accountName,
         accountNumber: vender.accountName,
         swiftCode: vender.swiftCode,
+        permissions: vender.permissions,
         iban: vender.iban,
         declaration: vender.declaration,
         profile_Picture: vender.profile_Picture,
@@ -333,6 +341,7 @@ const VenderLogin = async (req, res) => {
       },
       role: vender.role,
       status: vender.status,
+      permissions: vender.permissions,
     });
   } catch (err) {
     res.status(500).send({ error: err.message });
@@ -831,7 +840,9 @@ const removeVenderAccount = async (req, res) => {
 
 const getVendorDashboardStats = async (req, res) => {
   // const vendorId = req.user._id;
-  const vendorId = ["Editor", "Operator"].includes(req.user?._doc?.role)
+  const roleExist = (await roles.find()).map((item) => item.name);
+
+  const vendorId = roleExist.includes(req.user?._doc?.role)
     ? req.user._doc.vendor
     : req.user._id;
 

@@ -65,6 +65,11 @@ app.use(
   authenticateUser,
   require("./routes/subVendorRoutes")
 );
+app.use(
+  "/api/roles",
+  authenticateUser,
+  require("./routes/rolesAndPermissionRoutes")
+);
 app.use("/api/invoice", authenticateUser, require("./routes/invoiceBatches"));
 app.use("/api/document", authenticateUser, require("./routes/documentRoutes"));
 app.use(

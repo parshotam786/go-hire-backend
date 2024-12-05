@@ -620,7 +620,6 @@ const VenderDirectory = async (req, res) => {
 };
 
 const UserProfile = async (req, res) => {
-  console.log(req.params.id);
   try {
     const vender = await Vender.findById(req.params.id).select("-password");
     if (vender) {

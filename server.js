@@ -9,7 +9,6 @@ const port = process.env.PORT || 5000;
 const routes = [
   "adminRoutes",
   "authRoutes",
-  "productRoutes",
   "categoriesRoutes",
   "quickbookRoutes",
   "reviewRoutes",
@@ -42,6 +41,7 @@ routes.forEach((route) => {
 
 app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/order", authenticateUser, require("./routes/orderRoutes"));
+app.use("/api/product", authenticateUser, require("./routes/productRoutes"));
 app.use("/api/customer", authenticateUser, require("./routes/customersRoutes"));
 app.use("/api/imports", authenticateUser, require("./routes/importBilkData"));
 app.use(

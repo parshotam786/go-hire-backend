@@ -48,7 +48,7 @@ exports.getRoleByVendorId = async (req, res) => {
   }
 
   try {
-    const existingRole = await roles.find({ vendorId });
+    const existingRole = await roles.find({ vendorId }).sort({ _id: -1 });
 
     res.status(201).json({
       success: true,

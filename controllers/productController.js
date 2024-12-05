@@ -1,4 +1,5 @@
 const Product = require("../models/productModel");
+const venderModel = require("../models/venderModel");
 
 // Add Product Api
 exports.addProduct = async (req, res) => {
@@ -287,8 +288,19 @@ exports.getProductsByVendorId = async (req, res) => {
 };
 // Remove product from data base
 exports.removeProduct = async (req, res) => {
+  const vendorId = req.user._id;
   try {
     const { productId } = req.params;
+    const user = await venderModel.findOne({ _id: vendorId });
+    console.log(user.role);
+    if (!["Admin", "Seller"].includes(user.role)) {
+      if (!user.permissions.includes("Delete Product")) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to delete this product.",
+        });
+      }
+    }
 
     if (!productId) {
       return res.status(400).json({ message: "Product ID is required" });

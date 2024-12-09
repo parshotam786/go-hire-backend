@@ -15,8 +15,13 @@ const {
   multipleInvoicePrint,
   payInvoicePayment,
 } = require("../controllers/invoiceBatches");
+const authorizeAction = require("../utiles/authorizeAction");
 
-router.post("/invoice-run", generateInvoiceBatchNumber);
+router.post(
+  "/invoice-run",
+  authorizeAction(["Admin", "Seller"], "Invoice Run"),
+  generateInvoiceBatchNumber
+);
 router.get("/invoice-batches", getAllInvoiveBatches);
 router.delete("/:id", deleteInvoiceBatchById);
 router.delete(

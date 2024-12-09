@@ -142,12 +142,13 @@ const getOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
+    const vendorId = req.user;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 30;
     const searchQuery = req.query.search || "";
 
     const searchCriteria = {
-      vendorId: req.user?._id,
+      vendorId,
       $or: [
         { orderId: { $regex: searchQuery, $options: "i" } },
         { account: { $regex: searchQuery, $options: "i" } },
@@ -185,10 +186,10 @@ const getAllOrders = async (req, res) => {
 };
 
 const createOrder = async (req, res) => {
-  const { account, customerId } = req.body;
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   req.body.orderId = await generateAlphanumericId(vendorId, "Order");
+  req.body.vendorId = vendorId;
   const create = new Order(req.body);
   const created = await create.save();
 
@@ -207,19 +208,15 @@ const createOrder = async (req, res) => {
   }
 };
 //updated order api
-
 const updateOrder = async (req, res) => {
   try {
-    const { id } = req.params; // Order ID from the URL parameter
-    const updates = req.body; // Fields to update from the request body
+    const { id } = req.params;
+    const updates = req.body;
 
-    // Convert orderId to ObjectId if it's a string
-
-    // Find the order by ID and update it
     const updatedOrder = await Order.findByIdAndUpdate(
-      { _id: id }, // Find the order by _id
-      { $set: updates }, // Apply updates
-      { new: true, runValidators: true } // Return the updated document and run validators
+      { _id: id },
+      { $set: updates },
+      { new: true, runValidators: true }
     );
 
     if (!updatedOrder) {
@@ -240,19 +237,6 @@ const updateOrder = async (req, res) => {
       success: false,
     });
   }
-};
-
-// Get Customer Orders
-const getCustomerOrders = async (req, res) => {
-  const page = req?.query?.page ?? 1;
-  const limit = req?.query?.limit ?? 30;
-  const findOrders = await Order.find({ vendorId: req.user?._id })
-    .populate(["products.product", "customerId"])
-    .sort("-createdAt")
-    .skip((page - 1) * limit)
-    .limit(limit);
-
-  return res.status(200).json({ data: findOrders });
 };
 
 const addProductInOrder = async (req, res) => {
@@ -280,7 +264,11 @@ const addProductInOrder = async (req, res) => {
         { new: true }
       ).populate(["products.product", "invoiceRunCode", "paymentTerm"]);
       if (updated) {
-        return res.status(200).json({ data: updated });
+        return res.status(200).json({
+          success: true,
+          message: "Proudct added in Order successfully!",
+          data: updated,
+        });
       }
     } catch (error) {
       res.status(500).json({
@@ -316,10 +304,15 @@ const addProductInOrder = async (req, res) => {
       { new: true }
     ).populate("products.product");
     if (updated) {
-      return res.status(200).json({ data: updated });
+      return res.status(200).json({
+        success: true,
+        message: "Proudct added successfully!",
+        data: updated,
+      });
     }
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to add product in order",
       error: error.message,
     });
@@ -329,7 +322,7 @@ const addProductInOrder = async (req, res) => {
 const deleteProductFromOrder = async (req, res) => {
   const { orderId, productId } = req.body;
 
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   try {
     let isOrder = await Order.findOne({ _id: orderId, vendorId: vendorId });
@@ -354,7 +347,7 @@ const deleteProductFromOrder = async (req, res) => {
 
 const deleteCustomerOrder = async (req, res) => {
   const { customerId, orderId: _id } = req.body;
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   try {
     if (!customerId) {
@@ -378,7 +371,7 @@ const deleteCustomerOrder = async (req, res) => {
 const getOrderProduct = async (req, res) => {
   const { id } = req.params;
   const { order_Id } = req.query;
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   try {
     const isOrder = await Order.findOne({
@@ -402,7 +395,7 @@ const getOrderProduct = async (req, res) => {
 
 const updateOrderProduct = async (req, res) => {
   const { orderId, itemId, productId, ...rest } = req.body;
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   const updatedProduct = {
     quantity: rest?.quantity,
@@ -458,7 +451,8 @@ const updateOrderProduct = async (req, res) => {
 
 const allocateOrderProducts = async (req, res) => {
   const { orderId, productItemId, quantity, revert } = req.body;
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
+  console.log({ vendorId });
 
   const validation = {
     orderId: orderId,
@@ -573,7 +567,7 @@ const bookOrderInvoice = async (req, res) => {
     invoiceRunCode,
   } = req.body;
 
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   if (!orderId) return errorResponse(res, { message: "orderId is missing" });
 
@@ -751,7 +745,7 @@ const generateOrderInvoice = async (req, res) => {
 
 const generateOrderNote = async (req, res) => {
   const { id, type, DocNumber } = req.body;
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   if (!id || !type) {
     return errorResponse(res, { message: "Invalid fields!" });
@@ -1040,7 +1034,7 @@ const generateOrderNote = async (req, res) => {
 
 const invoicePDF = async (req, res) => {
   const { id, type } = req.body;
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   // Validate inputs
   if (!id || !type) {
@@ -1296,7 +1290,7 @@ const handleOrderBooking = async (req, res, type) => {
     invoiceRunCode,
     paymentTerms,
   } = req.body;
-  const vendorId = req.user._id;
+  const vendorId = req.user;
 
   const NoteModel = type === "bookOut" ? DeliverNote : ReturnNote;
   const noteType = type === "bookOut" ? "Delivery Note" : "Return Note";
@@ -1403,7 +1397,7 @@ const orderBookOut = (req, res) => handleOrderBooking(req, res, "bookOut");
 
 const invoiceByVendorId = async (req, res) => {
   try {
-    const vendorId = req.user._id;
+    const vendorId = req.user;
     const deliverNotes = await DeliverNote.find({ vendorId })
       .populate("customerId")
       .populate("orderId");
@@ -1516,7 +1510,7 @@ const createPdf = async (html) => {
 };
 
 const getOrdersOnRent = async (req, res) => {
-  const vendorId = req.user._id;
+  const vendorId = req.user;
   const {
     name,
     description,

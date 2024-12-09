@@ -12,6 +12,7 @@ const multer = require("multer");
 const router = require("express").Router();
 const path = require("path");
 const { OpenAIHandler } = require("../controllers/openAiController");
+const authorizeAction = require("../utiles/authorizeAction");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -40,14 +41,23 @@ router.post("/add-product", upload.array("image", 5), addProduct);
 router.put(
   "/update-product/:productId",
   upload.array("image", 5),
+  authorizeAction(["Admin", "Seller"], "Edit Product"),
   updateProduct
 );
-router.delete("/delete-product/:productId", removeProduct);
+router.delete(
+  "/delete-product/:productId",
+  authorizeAction(["Admin", "Seller"], "Delete Product"),
+  removeProduct
+);
 router.get("/product-detail/:id", getProudctById);
 router.delete("/product/:productId/image", deleteProductImage);
 router.get("/product-list", ProductList);
 router.post("/product-lists", getProductsByVendorId);
-router.get("/product/list", getProductsBySearch);
+router.get(
+  "/product/list",
+  authorizeAction(["Admin", "Seller"], "All Product"),
+  getProductsBySearch
+);
 router.post("/product/description", OpenAIHandler);
 
 module.exports = router;

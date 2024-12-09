@@ -26,11 +26,11 @@ const upload = multer({
 });
 
 const addCustomer = async (req, res) => {
+  const vendorId = req.user;
   try {
     const {
       name,
       number,
-      vendorId,
       owner,
       stop,
       active,
@@ -193,8 +193,9 @@ const addCustomer = async (req, res) => {
 };
 
 const getCustomer = async (req, res) => {
+  const vendorId = req.user;
   try {
-    const { page = 1, limit = 10, vendorId, search } = req.query;
+    const { page = 1, limit = 10, search } = req.query;
     const query = {};
 
     if (vendorId) {
@@ -249,12 +250,13 @@ const getCustomer = async (req, res) => {
 };
 
 const updateCustomer = async (req, res) => {
+  const vendorId = req.user;
   try {
     const { id } = req.params;
     const updateData = {
       name: req.body.name,
       number: req.body.number,
-      vendorId: req.body.vendorId,
+      vendorId: vendorId,
       owner: req.body.owner,
       stop: req.body.stop,
       active: req.body.active,

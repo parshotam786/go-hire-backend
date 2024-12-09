@@ -3,6 +3,7 @@ const venderModel = require("../models/venderModel");
 
 // Add Product Api
 exports.addProduct = async (req, res) => {
+  const vendorId = req.user;
   try {
     const {
       productName,
@@ -22,7 +23,6 @@ exports.addProduct = async (req, res) => {
       rateDefinition,
       vat,
       subCategory,
-      vendorId,
       lenghtUnit,
       weightUnit,
       weight,
@@ -114,6 +114,7 @@ exports.addProduct = async (req, res) => {
 
 // Update Product Api
 exports.updateProduct = async (req, res) => {
+  const vendorId = req.user;
   try {
     const { productId } = req.params;
 
@@ -135,7 +136,6 @@ exports.updateProduct = async (req, res) => {
       vat,
       rate,
       subCategory,
-      vendorId,
       lenghtUnit,
       weightUnit,
       weight,
@@ -234,7 +234,7 @@ exports.ProductList = async (req, res) => {
 // Get all product list of specific user
 exports.getProductsByVendorId = async (req, res) => {
   try {
-    const { vendorId } = req.body;
+    const vendorId = req.user;
 
     if (!vendorId) {
       return res.status(400).json({ error: "Vendor ID is required" });
@@ -288,25 +288,18 @@ exports.getProductsByVendorId = async (req, res) => {
 };
 // Remove product from data base
 exports.removeProduct = async (req, res) => {
-  const vendorId = req.user._id;
+  const vendorId = req.user;
   try {
     const { productId } = req.params;
-    const user = await venderModel.findOne({ _id: vendorId });
-    console.log(user.role);
-    if (!["Admin", "Seller"].includes(user.role)) {
-      if (!user.permissions.includes("Delete Product")) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to delete this product.",
-        });
-      }
-    }
 
     if (!productId) {
       return res.status(400).json({ message: "Product ID is required" });
     }
 
-    const product = await Product.findByIdAndDelete(productId);
+    const product = await Product.findByIdAndDelete({
+      _id: productId,
+      vendorId,
+    });
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -355,7 +348,9 @@ exports.getProudctById = async (req, res) => {
 
 exports.getProductsBySearch = async (req, res) => {
   try {
-    const { vendorId, search } = req.query;
+    const { search } = req.query;
+
+    const vendorId = req.user;
 
     if (!vendorId) {
       return res.status(400).json({ error: "Vendor ID is required" });

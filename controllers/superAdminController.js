@@ -3,7 +3,7 @@ const Product = require("../models/productModel");
 
 exports.AllVendorList = async (req, res) => {
   try {
-    const vendors = await Vender.find().sort({
+    const vendors = await Vender.find({ vendor: null }).sort({
       createdAt: -1,
     });
     const productCounts = await Product.aggregate([
@@ -18,8 +18,10 @@ exports.AllVendorList = async (req, res) => {
     const list = vendors.map((vendor) => ({
       id: vendor._id,
       thumbnail: vendor.profile_Picture,
-      title: vendor.companyName,
+      companyName: vendor.companyName,
+      VendorName: vendor.legalName,
       status: vendor.status,
+      email: vendor.email,
       product: productCountMap[vendor._id] || 0,
       role: vendor.role,
     }));

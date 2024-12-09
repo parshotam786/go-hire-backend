@@ -4,7 +4,7 @@ const Customer = require("../models/customers");
 
 exports.createInvoiceRunCode = async (req, res) => {
   try {
-    const { _id: vendorId } = req.user;
+    const vendorId = req.user;
 
     const { name, description, code } = req.body;
     // Check for required fields
@@ -49,7 +49,7 @@ exports.createInvoiceRunCode = async (req, res) => {
 
 exports.getAllInvoiceRunCode = async (req, res) => {
   try {
-    const { _id: vendorId } = req.user;
+    const vendorId = req.user;
     const { page = 1, limit = 10, search = "" } = req.query;
 
     if (!vendorId) {
@@ -116,7 +116,7 @@ exports.getInvoiceRunCodeById = async (req, res) => {
 // Update a specific payment term by ID
 exports.updateInvoiceRunCodeById = async (req, res) => {
   try {
-    const { _id: vendorId } = req.user;
+    const vendorId = req.user;
     const updateInvoiceRunCode = await InvoiceRunCode.findByIdAndUpdate(
       req.params.id,
       {

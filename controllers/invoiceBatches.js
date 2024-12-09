@@ -37,7 +37,8 @@ const generateAlphanumericId = async (vendorId, type = "Order") => {
 };
 
 const generateInvoiceBatchNumber = async (req, res) => {
-  const vendorId = req.user._id;
+  const vendorId = req.user;
+  console.log(req.user, "udddd");
   const {
     name,
     description,
@@ -98,7 +99,7 @@ const generateInvoiceBatchNumber = async (req, res) => {
     }
 
     const filteredOrders = sortedData.filter((order) => order.invoiceRunCode);
-
+    console.log(filteredOrders, "filteredOrders");
     if (!filteredOrders.length) {
       return res.status(404).json({ message: "No matching invocies found" });
     }

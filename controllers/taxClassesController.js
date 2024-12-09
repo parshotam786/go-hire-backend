@@ -109,7 +109,9 @@ const getAllTaxList = async (req, res) => {
 
 const getAlTaxClasslProducts = async (req, res) => {
   try {
-    const vendorId = ["Editor", "Operator"].includes(req.user?._doc?.role)
+    const vendorId = ["Editor", "Operator", "Moderator"].includes(
+      req.user?._doc?.role
+    )
       ? req.user._doc.vendor
       : req.user._id;
 

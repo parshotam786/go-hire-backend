@@ -57,7 +57,7 @@ exports.createPaymentTerm = async (req, res) => {
 
 exports.getAllPaymentTerms = async (req, res) => {
   try {
-    const { _id: vendorId } = req.user;
+    const vendorId = req.user;
     const { page = 1, limit = 10, search = "" } = req.query;
 
     if (!vendorId) {

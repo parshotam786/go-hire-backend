@@ -6,10 +6,10 @@ const {
   getUserProfile,
   updateUserRolesAndPermissions,
 } = require("../controllers/subVendorControler");
-const checkRole = require("../utiles/checkRoleMiddleware");
+const checkRole = require("../utiles/authorizeAction");
 const router = express.Router();
 
-router.post("/create-sub-user", checkRole(), createEditorOrOperator);
+router.post("/create-sub-user", createEditorOrOperator);
 router.get("/all-sub-user", getAllSubVendor);
 router.get("/sub-user-profile/:id", getUserProfile);
 router.put("/sub-user-role-permissions/:id", updateUserRolesAndPermissions);

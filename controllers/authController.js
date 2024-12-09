@@ -874,6 +874,14 @@ const getVendorDashboardStats = async (req, res) => {
       },
       {
         $lookup: {
+          from: "venders",
+          localField: "_id",
+          foreignField: "vendor",
+          as: "venders",
+        },
+      },
+      {
+        $lookup: {
           from: "returnnotes",
           localField: "_id",
           foreignField: "vendorId",
@@ -887,6 +895,7 @@ const getVendorDashboardStats = async (req, res) => {
           productsCount: { $size: "$products" },
           customersCount: { $size: "$customers" },
           invoicesCount: { $size: "$invoices" },
+          userCount: { $size: "$venders" },
         },
       },
       {
@@ -896,6 +905,7 @@ const getVendorDashboardStats = async (req, res) => {
             { name: "Products", count: "$productsCount" },
             { name: "Customers", count: "$customersCount" },
             { name: "Invoices", count: "$invoicesCount" },
+            { name: "User Roles", count: "$userCount" },
           ],
         },
       },

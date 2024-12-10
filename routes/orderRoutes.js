@@ -20,9 +20,20 @@ const {
   getOrdersOnRent,
 } = require("../controllers/orderController");
 const authorizeAction = require("../utiles/authorizeAction");
+const { getCustomer } = require("../controllers/customersController");
+const { getProductsBySearch } = require("../controllers/productController");
 
 const router = express.Router();
-
+router.get(
+  "/customer",
+  authorizeAction(["Admin", "Seller"], "Orders"),
+  getCustomer
+);
+router.get(
+  "/product/list",
+  authorizeAction(["Admin", "Seller"], "Orders"),
+  getProductsBySearch
+);
 router.get("/get-all-orders", getAllOrders);
 router.get("/:id", getOrder);
 router.post(
@@ -49,6 +60,7 @@ router.put(
   authorizeAction(["Admin", "Seller"], "Create Order"),
   allocateOrderProducts
 );
+
 router.put(
   "/update-product-items",
   updateOrderProduct,

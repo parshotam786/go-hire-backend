@@ -672,16 +672,34 @@ const getInvocieBatchById = async (req, res) => {
 
 // ***************************delete Invoice Batch*******************************
 const deleteInvoiceBatchById = async (req, res) => {
+  const vendorId = req.user;
   try {
-    const InvoiceBatch = await invoiceBatches.findByIdAndDelete(req.params.id);
+    const orderData = await invoiceBatches
+      .findOne({
+        _id: req.params.id,
+        vendorId,
+      })
+      .populate();
+    console.log({ orderData });
+
+    await Order.updateMany(
+      { _id: { $in: orderData.orders }, invoiceInBatch: 1 },
+      { $set: { invoiceInBatch: 0 } }
+    );
+
+    const InvoiceBatch = await invoiceBatches.findByIdAndDelete({
+      _id: req.params.id,
+      vendorId: vendorId,
+    });
     if (!InvoiceBatch) {
       return res
         .status(404)
         .json({ success: false, message: "Invoice Batch not found" });
     }
-    res
-      .status(200)
-      .json({ success: true, message: "Invoice Batch deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Invoice Batch deleted successfully",
+    });
   } catch (error) {
     res
       .status(500)
@@ -691,7 +709,7 @@ const deleteInvoiceBatchById = async (req, res) => {
 
 const removeOrderFromInvoiceBatch = async (req, res) => {
   const { invoiceBatchId, orderId } = req.params;
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   try {
     // Find the invoice batch by ID and vendor ID to ensure ownership
@@ -844,7 +862,7 @@ const createPdf = async (html) => {
 };
 // post sigle invoice
 const postSingleInvoice = async (req, res) => {
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   try {
     const { id, invoiceId } = req.body;
@@ -1081,7 +1099,7 @@ const postSingleInvoice = async (req, res) => {
   }
 };
 const postMulipleInvoice = async (req, res) => {
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   try {
     const { id } = req.body;
@@ -1476,7 +1494,7 @@ const postMulipleInvoice = async (req, res) => {
 // };
 
 const confrimInvoiceBatchStatus = async (req, res) => {
-  const { _id: vendorId } = req.user;
+  const vendorId = req.user;
 
   const { id, status } = req.body;
   if (!id) {
@@ -1530,7 +1548,7 @@ const confrimInvoiceBatchStatus = async (req, res) => {
 
 const confrimInvoice = async (req, res) => {
   try {
-    const { _id: vendorId } = req.user;
+    const vendorId = req.user;
     const batchNumber = await generateAlphanumericId(vendorId, "Invoice");
 
     const { id, invoiceId } = req.body;

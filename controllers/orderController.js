@@ -548,7 +548,7 @@ const allocateOrderProducts = async (req, res) => {
     }).populate("products.product");
 
     return successResponse(res, {
-      message: "Product status changed successfully!",
+      message: "Product status updated to Allocated!",
       data: updatedOrder,
     });
   } catch (error) {

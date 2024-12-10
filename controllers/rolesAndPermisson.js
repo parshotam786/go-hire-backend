@@ -10,7 +10,18 @@ exports.addRole = async (req, res) => {
       .status(400)
       .json({ success: false, message: "Role name is required" });
   }
-
+  if (name.toLowerCase() === "seller") {
+    return res.status(400).json({
+      success: false,
+      message: "You are not authorizied to assign Seller role.",
+    });
+  }
+  if (name.toLowerCase() === "admin") {
+    return res.status(400).json({
+      success: false,
+      message: "You are not authorizied to assign Admin role.",
+    });
+  }
   try {
     const existingRole = await roles.findOne({ name, vendorId });
     if (existingRole) {

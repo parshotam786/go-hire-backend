@@ -245,7 +245,17 @@ exports.getProductsByVendorId = async (req, res) => {
         createdAt: -1,
       })
       .populate(["category", "subCategory", "rateDefinition"]);
-
+    const inStock = (quantity) => {
+      if (quantity === 0) {
+        return "OUTOFSTOCK";
+      }
+      if (quantity > 0 && quantity < 10) {
+        return "LOWSTOCK";
+      }
+      if (quantity > 10) {
+        return "INSTOCK";
+      }
+    };
     const transformedProducts = products.map((product) => ({
       id: product._id,
       companyProductName: product.companyProductName,
@@ -269,6 +279,7 @@ exports.getProductsByVendorId = async (req, res) => {
       weight: product.weight,
       length: product.length,
       width: product.width,
+      stockStatus: inStock(Number(product.quantity)),
       height: product.height,
       vendorId: product.vendorId,
       thumbnail: product.images[0],

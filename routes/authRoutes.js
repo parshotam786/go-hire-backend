@@ -18,6 +18,8 @@ const {
   updateBrandLogo,
   getBrandLogo,
   emailVerifyController,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 const {
   invoiceAddData,
@@ -84,7 +86,8 @@ router.get(
   // allowedRoles(["Seller", "Editor", "Operator"]),
   getVendorDashboardStats
 );
-
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
 // router.post("/add-product", upload.array("image", 5), addProduct);
 // router.post("/delete-product", removeProduct);
 // router.delete("/delete-product/:productId", removeProduct);

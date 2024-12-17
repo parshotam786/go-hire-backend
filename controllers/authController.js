@@ -4,6 +4,7 @@ const Customer = require("../models/customers");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { upload, uploadLogo } = require("../utiles/multerConfig");
+const nodemailer = require("nodemailer");
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
 const Documents = require("../models/documentNumber");
@@ -922,6 +923,110 @@ const getVendorDashboardStats = async (req, res) => {
   }
 };
 
+//forgot passowrd
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if vendor exists
+    const vendor = await Vender.findOne({ email });
+    if (!vendor) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Vendor not found" });
+    }
+
+    // Generate a reset token (valid for 1 hour)
+    const resetToken = jwt.sign(
+      { _id: vendor._id },
+      process.env.JWT_TOKEN_SECRET_KEY,
+      {
+        expiresIn: "1h",
+      }
+    );
+
+    // Save the token temporarily in the database (optional: store hashed token for security)
+    vendor.resetPasswordToken = resetToken;
+    vendor.resetPasswordExpires = Date.now() + 3600000; // 1 hour from now
+    await vendor.save();
+
+    // Send email with reset link
+    const resetLink = `${process.env.FRONTEND_URL}auth/reset-password/${resetToken}`;
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.NODEMAILER_EMAIL,
+        pass: process.env.NODEMAILER_PASS,
+      },
+    });
+
+    // Send mail
+    const mailOptions = {
+      from: "parshotamrughanii@gmail.com",
+      to: email,
+      subject: "Password Reset Request",
+      html: `<p>You requested for a password reset. Click the link below to reset your password:</p>
+             <a href="${resetLink}">Reset Password</a>
+             <p>This link will expire in 1 hour.</p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).send({
+      success: true,
+      message: "Password reset link sent to your email",
+    });
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+};
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    const decoded = jwt.verify(token, process.env.JWT_TOKEN_SECRET_KEY);
+
+    const vendor = await Vender.findById(decoded._id);
+    if (!vendor) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Vendor not found" });
+    }
+    if (newPassword === "") {
+      return res
+        .status(404)
+        .send({ success: false, message: "Password field is Empty!" });
+    }
+    if (newPassword.length < 5) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Password is too short!" });
+    }
+
+    if (Date.now() > vendor.resetPasswordExpires) {
+      return res.status(400).send({ success: false, message: "Token expired" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    vendor.password = hashedPassword;
+    vendor.resetPasswordToken = undefined;
+    vendor.resetPasswordExpires = undefined;
+    await vendor.save();
+
+    res.status(200).send({
+      success: true,
+      message:
+        "Password reset successful. You can now log in with your new password.",
+    });
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   AdminLogin,
   AdminRegister,
@@ -938,4 +1043,6 @@ module.exports = {
   updateVendorStatus,
   removeVenderAccount,
   getVendorDashboardStats,
+  forgotPassword,
+  resetPassword,
 };

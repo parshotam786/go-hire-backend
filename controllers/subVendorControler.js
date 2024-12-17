@@ -39,7 +39,7 @@ exports.createEditorOrOperator = async (req, res) => {
 
     const token = jwt.sign(
       { _id: newUser._id, role: newUser.role },
-      "your_jwt_secret",
+      process.env.JWT_TOKEN_SECRET_KEY,
       { expiresIn: "7d" }
     );
 
@@ -49,8 +49,8 @@ exports.createEditorOrOperator = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "parshotamrughanii@gmail.com",
-        pass: "walz hskf huzy yljv",
+        user: process.env.NODEMAILER_EMAIL,
+        pass: process.env.NODEMAILER_PASS,
       },
     });
 
